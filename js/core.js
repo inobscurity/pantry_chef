@@ -70,15 +70,30 @@
   }
 
   /*
-   * recipe: { ingredients: [{ name, measure }] }
+   * recipe: { ingredients: [{ name, measure, have? }] }
    * Returns each ingredient tagged as 'have' | 'staple' | 'need'.
+   * A source that matches ingredients itself (Spoonacular) sets `have`; otherwise we match.
    */
   function classifyIngredients(recipe, pantry, assumeStaples) {
     return recipe.ingredients.map((ing) => {
+      const have = typeof ing.have === 'boolean'
+        ? ing.have
+        : pantry.some((p) => ingredientMatches(p, ing.name));
       let status = 'need';
-      if (pantry.some((p) => ingredientMatches(p, ing.name))) status = 'have';
+      if (have) status = 'have';
       else if (assumeStaples && isStaple(ing.name)) status = 'staple';
       return Object.assign({}, ing, { status });
+    });
+  }
+
+  // Two sources can carry the same recipe. Keep the first of each name.
+  function dedupe(recipes) {
+    const seen = new Set();
+    return recipes.filter((r) => {
+      const key = normalize(r.name);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
   }
 
@@ -150,7 +165,7 @@
 
   const api = {
     STAPLES, normalize, tokens, ingredientMatches, isStaple,
-    classifyIngredients, groupRecipes, splitSteps,
+    classifyIngredients, groupRecipes, splitSteps, dedupe,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RecipeCore = api;

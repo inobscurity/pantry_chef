@@ -34,6 +34,20 @@
           <button type="button" id="find" class="btn primary" disabled>Find recipes</button>
           <button type="button" id="clear" class="btn link" hidden>Clear all</button>
         </div>
+        <details class="keybox">
+          <summary>Recipe sources: <span id="sources-summary">TheMealDB only</span></summary>
+          <p>TheMealDB is always searched. Add a free
+            <a href="https://spoonacular.com/food-api/console" target="_blank" rel="noopener">Spoonacular API key</a>
+            to also search hundreds of thousands of recipes from food websites and blogs.</p>
+          <label for="spoon-key" class="label">Spoonacular API key</label>
+          <div class="add-row">
+            <input id="spoon-key" type="password" autocomplete="off" spellcheck="false">
+            <button type="button" id="save-key" class="btn secondary">Save</button>
+          </div>
+          <p class="hint">The key is kept only in this browser. On another device, enter it again.
+            <button type="button" id="remove-key" class="btn link inline" hidden>Remove key</button></p>
+          <p id="key-msg" class="hint" role="status"></p>
+        </details>
       </form>
 
       <div id="status" class="status" role="status" aria-live="polite" hidden>
@@ -49,11 +63,13 @@
   </main>
 
   <footer class="wrap foot">
-    Recipes from <a href="https://www.themealdb.com" target="_blank" rel="noopener">TheMealDB</a>.
+    Recipes from <a href="https://www.themealdb.com" target="_blank" rel="noopener">TheMealDB</a>
+    and <a href="https://spoonacular.com/food-api" target="_blank" rel="noopener">spoonacular</a>.
   </footer>
 
   <script src="js/core.js"></script>
   <script src="js/mealdb.js"></script>
+  <script src="js/spoonacular.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

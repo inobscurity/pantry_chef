@@ -69,16 +69,19 @@
       if (name) ingredients.push({ name, measure: (meal['strMeasure' + i] || '').trim() });
     }
     return {
-      id: meal.idMeal,
+      id: 'mealdb-' + meal.idMeal,
+      sourceName: 'TheMealDB',
       name: meal.strMeal,
       image: meal.strMealThumb,
+      thumb: meal.strMealThumb ? meal.strMealThumb + '/medium' : '',
       category: meal.strCategory || '',
       area: meal.strArea || '',
       tags: (meal.strTags || '').split(',').map((t) => t.trim()).filter(Boolean),
       source: meal.strSource || '',
       youtube: meal.strYoutube || '',
-      instructions: meal.strInstructions || '',
+      steps: Core.splitSteps(meal.strInstructions),
       ingredients,
+      complete: true, // ingredients and steps are all here; nothing more to fetch
     };
   }
 

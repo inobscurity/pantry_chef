@@ -53,3 +53,19 @@ test('splits instructions into steps', () => {
   assert.equal(Core.splitSteps(wall).length, 3);
   assert.deepEqual(Core.splitSteps(''), []);
 });
+
+test('a source can decide which ingredients you have', () => {
+  const recipe = { ingredients: [
+    { name: 'Chicken thighs', have: true },
+    { name: 'Rice', have: false },
+    { name: 'Salt', have: false },
+    { name: 'Onion' },
+  ] };
+  const items = Core.classifyIngredients(recipe, ['onion'], true);
+  assert.deepEqual(items.map((i) => i.status), ['have', 'need', 'staple', 'have']);
+});
+
+test('dedupe keeps the first recipe of each name', () => {
+  const out = Core.dedupe([{ name: 'Chicken Curry', id: 1 }, { name: 'chicken  curry!', id: 2 }, { name: 'Pie', id: 3 }]);
+  assert.deepEqual(out.map((r) => r.id), [1, 3]);
+});
