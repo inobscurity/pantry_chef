@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Pantry Chef</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <h1>Pantry Chef</h1>
+      <p class="lede">Type what you have. See what you can cook now, and what you could cook after buying one, two or three things.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Search view -->
+    <section id="search-view">
+      <form id="add-form" class="card pantry" autocomplete="off">
+        <label for="ingredient-input" class="label">Ingredients you have</label>
+        <div class="add-row">
+          <input id="ingredient-input" type="text" placeholder="e.g. chicken, rice, onion" enterkeyhint="done">
+          <button type="submit" class="btn secondary">Add</button>
+        </div>
+        <p class="hint">Separate several with commas.</p>
+        <ul id="chips" class="chips" aria-label="Your ingredients"></ul>
+        <label class="toggle">
+          <input id="staples" type="checkbox" checked>
+          <span>I have the basics: salt, pepper, cooking oil and water</span>
+        </label>
+        <div class="actions">
+          <button type="button" id="find" class="btn primary" disabled>Find recipes</button>
+          <button type="button" id="clear" class="btn link" hidden>Clear all</button>
+        </div>
+      </form>
+
+      <div id="status" class="status" role="status" aria-live="polite" hidden>
+        <p id="status-text"></p>
+        <div class="bar"><div id="status-bar"></div></div>
+      </div>
+
+      <div id="results"></div>
+    </section>
+
+    <!-- Recipe view -->
+    <article id="recipe-view" hidden></article>
+  </main>
+
+  <footer class="wrap foot">
+    Recipes from <a href="https://www.themealdb.com" target="_blank" rel="noopener">TheMealDB</a>.
+  </footer>
+
+  <script src="js/core.js"></script>
+  <script src="js/mealdb.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
