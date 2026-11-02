@@ -11,7 +11,10 @@ but it doesn't use are ignored.
 | +2 **Buy 2 ingredients** | Needs two. |
 | +3 **Buy 3 ingredients** | Needs three. Recipes needing more are left out. |
 
-Within a group, recipes that use more of your ingredients come first, then simpler ones.
+Your **main ingredients** drive the search: everything you list except salt, pepper, oil, water,
+sugar, flour, butter and your basics. Those still count as things you have, but a recipe has to use
+at least one main ingredient to be shown. Within a group, recipes that use more of your main
+ingredients come first, then more of everything you listed, then simpler ones.
 
 Pick a recipe to see:
 
@@ -47,7 +50,7 @@ app lists how many recipes each source contributed, and says if a source couldn'
   condiments, drinks and forks are left out. About half its recipes give quantities as proportions
   rather than amounts; the recipe screen says so.
 - **Spoonacular**: add your key under **Recipe sources**. It's saved only in that browser, never in
-  this repository. Each search costs roughly 1–2 of your daily points and opening one of its
+  this repository. Each search costs about 2 of your daily points and opening one of its
   recipes about 1 more. If the key is rejected or the allowance is used up, the other sources
   still work.
 

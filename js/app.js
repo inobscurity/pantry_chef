@@ -182,9 +182,11 @@
     $('results').replaceChildren();
     setStatus('Searching recipes…', 0.02);
 
-    const pantry = state.pantry.slice();
+    // Search with your main ingredients: salt, butter and basics would otherwise pull in
+    // every recipe that happens to use them.
+    const mains = Core.mainIngredients(state.pantry, state.basics);
     const list = sources();
-    const results = await Promise.allSettled(list.map((s) => s.find(pantry)));
+    const results = await Promise.allSettled(list.map((s) => s.find(mains)));
 
     state.notices = [];
     state.found = list.map((s, i) => {

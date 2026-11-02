@@ -165,9 +165,9 @@
   function classifyIngredients(recipe, pantry, basics) {
     const myBasics = basics || [];
     return recipe.ingredients.map((ing) => {
-      const status = typeof ing.have === 'boolean'
-        ? (ing.have ? 'have' : rest(ing, myBasics))
-        : statusOf(ing, pantry, myBasics);
+      // A source's own "you have this" is trusted; otherwise we check ourselves, because a
+      // source is only searched with your main ingredients.
+      const status = ing.have === true ? 'have' : statusOf(ing, pantry, myBasics);
       return Object.assign({}, ing, { status });
     });
   }
@@ -209,12 +209,31 @@
     'Buy 3 ingredients',
   ];
 
+  // Seasonings and fats that go into almost everything. They count as things you have,
+  // but a recipe that only uses these isn't a match for your ingredients.
+  const MINOR = new Set(['butter', 'margarine', 'ghee', 'lard']);
+
+  /*
+   * Your main ingredients: the ones a recipe should be built around. Leaves out salt,
+   * pepper, oil, water, sugar, flour, butter and anything in your basics. If everything you
+   * listed is minor, all of it counts.
+   */
+  function mainIngredients(pantry, basics) {
+    const mains = pantry.filter((p) => {
+      const n = normalize(p);
+      return !STRICT.has(n) && !MINOR.has(n) && !coveredByBasics(basics || [], p);
+    });
+    return mains.length ? mains : pantry.slice();
+  }
+
   /*
    * Puts recipes into four groups by how many ingredients you'd need to buy (0–3).
-   * A recipe only has to use one of your ingredients. Recipes missing more than 3 are
-   * left out. Within a group, recipes that use more of your ingredients come first.
+   * A recipe must use at least one of your main ingredients; ones it doesn't use are
+   * ignored. Recipes missing more than 3 are left out. Within a group, recipes that use
+   * more of your main ingredients come first, then more of all yours, then simpler ones.
    */
   function groupRecipes(recipes, pantry, basics, maxMissing) {
+    const mains = mainIngredients(pantry, basics);
     const limit = maxMissing == null ? 3 : maxMissing;
     const groups = [];
     for (let i = 0; i <= limit; i++) {
@@ -224,11 +243,13 @@
       const items = classifyIngredients(recipe, pantry, basics);
       const need = items.filter((i) => i.status === 'need');
       const used = items.filter((i) => i.status === 'have').length;
-      if (used === 0 || need.length > limit) continue;
-      groups[need.length].recipes.push({ recipe, items, need, used });
+      const usedMain = mains.filter((m) => recipe.ingredients.some((i) => ingredientMatches(m, i.name))).length;
+      if (usedMain === 0 || need.length > limit) continue;
+      groups[need.length].recipes.push({ recipe, items, need, used, usedMain });
     }
     for (const g of groups) {
-      g.recipes.sort((x, y) => y.used - x.used
+      g.recipes.sort((x, y) => y.usedMain - x.usedMain
+        || y.used - x.used
         || x.recipe.ingredients.length - y.recipe.ingredients.length
         || x.recipe.name.localeCompare(y.recipe.name));
     }
@@ -271,7 +292,7 @@
   }
 
   const api = {
-    DEFAULT_BASICS, normalize, tokens, alternatives, ingredientMatches, basicMatches, coveredByBasics, isOptional, shortName,
+    DEFAULT_BASICS, normalize, tokens, alternatives, ingredientMatches, basicMatches, coveredByBasics, isOptional, shortName, mainIngredients,
     classifyIngredients, groupRecipes, splitSteps, dedupe,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

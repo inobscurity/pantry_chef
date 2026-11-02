@@ -14,7 +14,7 @@
 
   const Core = root.RecipeCore || (typeof require !== 'undefined' ? require('./core.js') : null);
   const BASE = 'https://api.spoonacular.com/';
-  const RESULTS = 60;
+  const RESULTS = 100;
 
   class SpoonacularError extends Error {
     constructor(message, status) {
@@ -117,7 +117,7 @@
     const data = await getJSON('recipes/findByIngredients', {
       ingredients: pantry.join(','),
       number: RESULTS,
-      ranking: 2,          // fewest missing ingredients first
+      ranking: 1,          // recipes that use the most of your ingredients first
       ignorePantry: false, // we handle basics ourselves, with the "I have the basics" switch
     }, key, fetchImpl);
     return (Array.isArray(data) ? data : []).map(searchResultToRecipe);

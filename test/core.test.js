@@ -131,3 +131,21 @@ test('an "X and Y" ingredient needs both parts', () => {
   assert.equal(status('Waxy potatoes, peeled and sliced'), 'need');
   assert.equal(status('Pumpkin, peeled and diced'), 'have');
 });
+
+test('recipes are built around your main ingredients, not your salt and butter', () => {
+  const pantry = ['Pumpkin', 'onion', 'butter', 'sour cream', 'chicken stock', 'salt', 'pepper'];
+  assert.deepEqual(Core.mainIngredients(pantry, Core.DEFAULT_BASICS), ['Pumpkin', 'onion', 'sour cream', 'chicken stock']);
+  const recipes = [
+    R('Rösti', 'Waxy potatoes', 'Butter', 'Salt', 'Pepper'),
+    R('Chapati', 'Atta', 'Salt', 'Water'),
+    R('Pumpkin Soup', 'Pumpkin', 'Onion', 'Butter', 'Chicken stock', 'Sour cream', 'Nutmeg'),
+    R('Butter Baked Onion', 'Onion', 'Butter', 'Bouillon cube'),
+  ];
+  const groups = Core.groupRecipes(recipes, pantry, Core.DEFAULT_BASICS, 3);
+  const names = groups.map((g) => g.recipes.map((r) => r.recipe.name));
+  assert.deepEqual(names, [[], ['Pumpkin Soup', 'Butter Baked Onion'], [], []]);
+});
+
+test('only minor ingredients listed: they all count', () => {
+  assert.deepEqual(Core.mainIngredients(['butter', 'salt'], Core.DEFAULT_BASICS), ['butter', 'salt']);
+});
