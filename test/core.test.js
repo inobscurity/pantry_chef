@@ -110,3 +110,24 @@ test('short names drop notes and preparation', () => {
   assert.equal(Core.shortName('Seven-spice (baharat — allspice, clove)'), 'Seven-spice');
   assert.equal(Core.shortName('Onion'), 'Onion');
 });
+
+test('matches the cases from a pumpkin soup search', () => {
+  const yes = [['chicken stock', 'Turkey or chicken broth, warm'], ['pumpkin', 'Butternut squash'],
+    ['pepper', 'Freshly ground black pepper'], ['pepper', 'Black peppercorns'], ['sour cream', 'Soured cream'],
+    ['capsicum', 'Red bell pepper'], ['beef mince', 'Ground beef'], ['chicken stock', 'Chicken stock cube'],
+    ['cream', 'Heavy cream'], ['butter', 'Unsalted butter']];
+  const no = [['pumpkin', 'Pumpkin seeds'], ['pumpkin', 'Pumpkin pie spice'], ['pepper', 'Red pepper flakes'],
+    ['pepper', 'Red pepper'], ['potato', 'Sweet potato'], ['milk', 'Coconut milk'], ['sour cream', 'Cream'],
+    ['chicken stock', 'Vegetable stock'], ['pepper', 'Sichuan peppercorns']];
+  for (const [a, b] of yes) assert.ok(Core.ingredientMatches(a, b), `${a} should cover ${b}`);
+  for (const [a, b] of no) assert.ok(!Core.ingredientMatches(a, b), `${a} should not cover ${b}`);
+});
+
+test('an "X and Y" ingredient needs both parts', () => {
+  const pantry = ['pumpkin', 'salt', 'pepper'];
+  const status = (name) => Core.classifyIngredients({ ingredients: [{ name }] }, pantry, []).map((i) => i.status)[0];
+  assert.equal(status('Kosher salt and vanilla extract'), 'need');
+  assert.equal(status('Salt and freshly ground black pepper'), 'have');
+  assert.equal(status('Waxy potatoes, peeled and sliced'), 'need');
+  assert.equal(status('Pumpkin, peeled and diced'), 'have');
+});

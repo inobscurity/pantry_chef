@@ -27,12 +27,41 @@
     'virgin', 'olive', 'vegetable', 'sunflower', 'canola', 'rapeseed', 'neutral', 'cooking',
     'light', 'mild', 'caster', 'granulated', 'cold', 'boiling', 'warm', 'lukewarm', 'iced',
     'tap', 'filtered', 'spray', 'free', 'range', 'clove', 'peppercorn', 'leaf',
+    // cream, milk and sugar
+    'heavy', 'double', 'single', 'thickened', 'pouring', 'whipping', 'full', 'fat', 'skim',
+    'skimmed', 'low', 'reduced',
   ]);
 
+  // Typed on their own, these are vague ("pepper" might be black pepper or a red pepper), so
+  // they only cover the everyday kinds, using the same rule as basics.
+  const STRICT = new Set(['salt', 'pepper', 'oil', 'water', 'sugar', 'flour', 'cream', 'milk', 'vinegar']);
+
+  // Different names for the same thing, including Australian ones. Applied before matching.
+  const SYNONYMS = [
+    [/\bbroth\b/g, 'stock'],
+    [/\bpeppercorns?\b/g, 'pepper'],
+    [/\bsoured cream\b/g, 'sour cream'],
+    [/\bbutternut squash\b/g, 'butternut pumpkin'],
+    [/\b(?:kabocha|winter) squash\b/g, 'pumpkin'],
+    [/\bcapsicums?\b/g, 'bell pepper'],
+    [/\baubergines?\b/g, 'eggplant'],
+    [/\bcourgettes?\b/g, 'zucchini'],
+    [/\bcilantro\b/g, 'coriander'],
+    [/\b(?:scallions?|green onions?)\b/g, 'spring onion'],
+    [/\bshrimps?\b/g, 'prawn'],
+    [/\b(?:powdered|confectioners'?) sugar\b/g, 'icing sugar'],
+    [/\bheavy cream\b|\bthickened cream\b/g, 'cream'],
+    [/\bminced (beef|pork|lamb|chicken|turkey)\b/g, '$1 mince'],
+    [/\bground (beef|pork|lamb|chicken|turkey)\b/g, '$1 mince'],
+  ];
+
   // Words that turn an ingredient into a different product: chicken isn't chicken stock.
+  // Pumpkin isn't pumpkin seeds, potato isn't sweet potato, milk isn't coconut milk.
   const DERIVED = new Set([
-    'stock', 'broth', 'powder', 'sauce', 'paste', 'cube', 'extract', 'essence', 'oil',
+    'stock', 'broth', 'powder', 'sauce', 'paste', 'extract', 'essence', 'oil',
     'vinegar', 'flour', 'milk', 'cream', 'butter', 'syrup', 'ketchup', 'jam', 'puree',
+    'seed', 'pepita', 'spice', 'flake', 'pie', 'sour', 'sweet', 'coconut', 'almond', 'oat',
+    'soy', 'condensed', 'evaporated', 'powdered', 'icing', 'liqueur', 'wine',
   ]);
 
   function singular(word) {
@@ -43,9 +72,11 @@
   }
 
   function normalize(name) {
-    return String(name || '')
+    let s = String(name || '')
       .toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '') // jalapeño -> jalapeno
+      .normalize('NFD').replace(/[̀-ͯ]/g, ''); // jalapeño -> jalapeno
+    for (const [pattern, replacement] of SYNONYMS) s = s.replace(pattern, replacement);
+    return s
       .replace(/[^a-z\s]/g, ' ')
       .split(/\s+/)
       .filter(Boolean)
@@ -66,7 +97,14 @@
       .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
       .split(/\s[—–]\s|:/)[0];
     const parts = core.split(/\s+or\s+|\s*\/\s*/i).map((s) => s.trim()).filter(Boolean);
-    return parts.length ? parts : [String(name || '')];
+    if (!parts.length) return [String(name || '')];
+    // "Turkey or chicken broth" also means "turkey broth".
+    const last = parts[parts.length - 1].split(',')[0].trim().split(/\s+/);
+    if (parts.length > 1 && last.length > 1) {
+      const noun = last[last.length - 1];
+      for (const p of parts.slice(0, -1)) if (!/\s/.test(p)) parts.push(p + ' ' + noun);
+    }
+    return parts;
   }
 
   // A short label: "Waxy potatoes (Yukon Gold), peeled and sliced" → "Waxy potatoes".
@@ -93,6 +131,7 @@
 
   // Does something you have (`have`) cover a recipe ingredient (`needed`)?
   function ingredientMatches(have, needed) {
+    if (STRICT.has(normalize(have))) return basicMatches(have, needed);
     return alternatives(needed).some((alt) => namesMatch(have, alt));
   }
 
@@ -126,15 +165,30 @@
   function classifyIngredients(recipe, pantry, basics) {
     const myBasics = basics || [];
     return recipe.ingredients.map((ing) => {
-      const have = typeof ing.have === 'boolean'
-        ? ing.have
-        : pantry.some((p) => ingredientMatches(p, ing.name));
-      let status = 'need';
-      if (have) status = 'have';
-      else if (isOptional(ing)) status = 'optional';
-      else if (coveredByBasics(myBasics, ing.name)) status = 'staple';
+      const status = typeof ing.have === 'boolean'
+        ? (ing.have ? 'have' : rest(ing, myBasics))
+        : statusOf(ing, pantry, myBasics);
       return Object.assign({}, ing, { status });
     });
+  }
+
+  function rest(ing, basics) {
+    if (isOptional(ing)) return 'optional';
+    if (basics && coveredByBasics(basics, ing.name)) return 'staple';
+    return 'need';
+  }
+
+  // "Kosher salt and vanilla extract" is only covered if both parts are.
+  function statusOf(ing, pantry, basics) {
+    const parts = shortName(ing.name).split(/\s+(?:and|&)\s+/i).filter(Boolean);
+    if (parts.length > 1) {
+      const has = parts.map((part) => pantry.some((p) => ingredientMatches(p, part)));
+      const covered = parts.every((part, i) => has[i] || coveredByBasics(basics, part));
+      if (covered) return has.some(Boolean) ? 'have' : 'staple';
+      return isOptional(ing) ? 'optional' : 'need';
+    }
+    if (pantry.some((p) => ingredientMatches(p, ing.name))) return 'have';
+    return rest(ing, basics);
   }
 
   // Several sources can carry the same recipe. Keep the first of each name.
