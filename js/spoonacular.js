@@ -79,12 +79,17 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
+  function optional(i) {
+    return /\boptional\b/i.test(i.original || '') || (i.meta || []).some((m) => /optional/i.test(m));
+  }
+
   function searchResultToRecipe(r) {
     const ing = (list, have) => (list || []).map((i) => ({
       id: i.id,
       name: capitalise(i.name),
       measure: measureText(i.amount, i.unitShort || i.unit),
       have,
+      optional: optional(i),
     }));
     return {
       id: 'spoon-' + r.id,
@@ -164,7 +169,7 @@
       const metric = e.measures && e.measures.metric;
       const measure = metric ? measureText(metric.amount, metric.unitShort) : measureText(e.amount, e.unit);
       let have = known.has(e.id) ? known.get(e.id) : knownNames.get(Core.normalize(e.name));
-      ingredients.push({ id: e.id, name, measure, have });
+      ingredients.push({ id: e.id, name, measure, have, optional: optional(e) });
     }
 
     const tags = [...(info.dishTypes || []), ...(info.diets || [])].slice(0, 3);

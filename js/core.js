@@ -6,20 +6,33 @@
 (function (root) {
   'use strict';
 
-  // Things most kitchens already have. When "Assume I have basics" is on, a recipe
-  // needing these doesn't count them as missing. Matched exactly, so "pepper" covers
-  // black pepper but not "red pepper".
-  const STAPLES = [
-    'salt', 'sea salt', 'kosher salt', 'pepper', 'black pepper', 'ground black pepper',
-    'water', 'boiling water', 'cold water', 'ice', 'oil', 'olive oil', 'extra virgin olive oil',
-    'vegetable oil', 'sunflower oil', 'canola oil', 'rapeseed oil', 'cooking spray',
-  ];
+  // Basics most kitchens have. The user can edit this list in the app.
+  const DEFAULT_BASICS = ['salt', 'pepper', 'oil', 'water'];
 
   // Words that describe how an ingredient is prepared, not what it is.
   const NOISE = new Set([
     'fresh', 'freshly', 'chopped', 'diced', 'sliced', 'minced', 'grated', 'ground', 'large',
     'small', 'medium', 'whole', 'dried', 'raw', 'cooked', 'boneless', 'skinless', 'organic',
-    'finely', 'roughly', 'peeled', 'of', 'and', 'or', 'to', 'taste', 'a', 'the',
+    'finely', 'roughly', 'thinly', 'peeled', 'crushed', 'beaten', 'softened', 'melted', 'cut',
+    'into', 'piece', 'about', 'plus', 'for', 'serving', 'garnish', 'needed', 'optional',
+    'room', 'temperature', 'packed', 'heaped', 'level', 'good', 'quality',
+    'of', 'and', 'or', 'to', 'taste', 'a', 'an', 'the', 'some',
+  ]);
+
+  // Words that don't change what a basic is: "fine sea salt" is still salt, "olive oil" is
+  // still oil. Anything else does: "red pepper" isn't pepper, "brown sugar" isn't sugar.
+  const BASIC_MODIFIERS = new Set([
+    'black', 'white', 'sea', 'kosher', 'table', 'fine', 'coarse', 'flaky', 'rock', 'cracked',
+    'plain', 'all', 'purpose', 'self', 'raising', 'rising', 'unsalted', 'salted', 'extra',
+    'virgin', 'olive', 'vegetable', 'sunflower', 'canola', 'rapeseed', 'neutral', 'cooking',
+    'light', 'mild', 'caster', 'granulated', 'cold', 'boiling', 'warm', 'lukewarm', 'iced',
+    'tap', 'filtered', 'spray', 'free', 'range', 'clove', 'peppercorn', 'leaf',
+  ]);
+
+  // Words that turn an ingredient into a different product: chicken isn't chicken stock.
+  const DERIVED = new Set([
+    'stock', 'broth', 'powder', 'sauce', 'paste', 'cube', 'extract', 'essence', 'oil',
+    'vinegar', 'flour', 'milk', 'cream', 'butter', 'syrup', 'ketchup', 'jam', 'puree',
   ]);
 
   function singular(word) {
@@ -46,47 +59,85 @@
     return meaningful.length ? meaningful : all;
   }
 
-  // Words that turn an ingredient into a different product: chicken isn't chicken stock.
-  const DERIVED = new Set([
-    'stock', 'broth', 'powder', 'sauce', 'paste', 'cube', 'extract', 'essence', 'oil',
-    'vinegar', 'flour', 'milk', 'cream', 'butter', 'syrup', 'ketchup', 'jam', 'puree',
-  ]);
+  // What a recipe's ingredient is, without notes: "Garlic (grated to a paste)" → "Garlic".
+  // "Water or dashi" and "lemon/lime juice" give each alternative.
+  function alternatives(name) {
+    const core = String(name || '')
+      .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
+      .split(/\s[—–]\s|:/)[0];
+    const parts = core.split(/\s+or\s+|\s*\/\s*/i).map((s) => s.trim()).filter(Boolean);
+    return parts.length ? parts : [String(name || '')];
+  }
+
+  // A short label: "Waxy potatoes (Yukon Gold), peeled and sliced" → "Waxy potatoes".
+  function shortName(name) {
+    return String(name || '')
+      .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
+      .split(/\s[—–]\s|:|,\s*(?=(?:peeled|sliced|chopped|diced|cut|crushed|grated|minced|halved|quartered|trimmed|drained|rinsed|softened|melted|beaten|at|finely|thinly|roughly|to|for|plus|about|or|if|cored|seeded|deseeded|torn|shredded)\b)/i)[0]
+      .replace(/\s+/g, ' ')
+      .replace(/[\s,;.]+$/, '')
+      .trim() || String(name || '');
+  }
 
   // "chicken" matches "chicken breast" and "chicken breast" matches "chicken":
   // one name's words all appear in the other, and the extra words don't make it a
   // different product.
-  function ingredientMatches(have, needed) {
-    const a = tokens(have);
-    const b = tokens(needed);
-    if (!a.length || !b.length) return false;
-    const within = (x, y) =>
-      x.every((w) => y.includes(w)) && !y.some((w) => !x.includes(w) && DERIVED.has(w));
-    return within(a, b) || within(b, a);
+  function namesMatch(a, b) {
+    const x = tokens(a);
+    const y = tokens(b);
+    if (!x.length || !y.length) return false;
+    const within = (p, q) =>
+      p.every((w) => q.includes(w)) && !q.some((w) => !p.includes(w) && DERIVED.has(w));
+    return within(x, y) || within(y, x);
   }
 
-  const STAPLE_SET = new Set(STAPLES.map(normalize));
-  function isStaple(name) {
-    return STAPLE_SET.has(normalize(name));
+  // Does something you have (`have`) cover a recipe ingredient (`needed`)?
+  function ingredientMatches(have, needed) {
+    return alternatives(needed).some((alt) => namesMatch(have, alt));
+  }
+
+  // Is a recipe ingredient one of your basics? Stricter than ingredientMatches.
+  function basicMatches(basic, needed) {
+    const b = tokens(basic);
+    if (!b.length) return false;
+    return alternatives(needed).some((alt) => {
+      const t = tokens(alt);
+      return b.every((w) => t.includes(w)) && t.every((w) => b.includes(w) || BASIC_MODIFIERS.has(w));
+    });
+  }
+
+  // Is a recipe ingredient covered by your basics? "Salt and pepper" needs both.
+  function coveredByBasics(basics, needed) {
+    return alternatives(needed).some((alt) =>
+      alt.split(/\s+(?:and|&)\s+/i).every((part) => basics.some((b) => basicMatches(b, part))));
+  }
+
+  const OPTIONAL = /\boptional\b|\bto serve\b|\bfor serving\b|\bto garnish\b|\bfor garnish\b|\bgarnish\b/i;
+  function isOptional(ing) {
+    return ing.optional === true || OPTIONAL.test(ing.name || '') || OPTIONAL.test(ing.measure || '');
   }
 
   /*
-   * recipe: { ingredients: [{ name, measure, have? }] }
-   * Returns each ingredient tagged as 'have' | 'staple' | 'need'.
+   * recipe: { ingredients: [{ name, measure, have?, optional? }] }
+   * Returns each ingredient tagged as 'have' | 'optional' | 'staple' | 'need'.
    * A source that matches ingredients itself (Spoonacular) sets `have`; otherwise we match.
+   * Only 'need' counts as something to buy.
    */
-  function classifyIngredients(recipe, pantry, assumeStaples) {
+  function classifyIngredients(recipe, pantry, basics) {
+    const myBasics = basics || [];
     return recipe.ingredients.map((ing) => {
       const have = typeof ing.have === 'boolean'
         ? ing.have
         : pantry.some((p) => ingredientMatches(p, ing.name));
       let status = 'need';
       if (have) status = 'have';
-      else if (assumeStaples && isStaple(ing.name)) status = 'staple';
+      else if (isOptional(ing)) status = 'optional';
+      else if (coveredByBasics(myBasics, ing.name)) status = 'staple';
       return Object.assign({}, ing, { status });
     });
   }
 
-  // Two sources can carry the same recipe. Keep the first of each name.
+  // Several sources can carry the same recipe. Keep the first of each name.
   function dedupe(recipes) {
     const seen = new Set();
     return recipes.filter((r) => {
@@ -106,24 +157,26 @@
 
   /*
    * Puts recipes into four groups by how many ingredients you'd need to buy (0–3).
-   * Recipes missing more than 3 are left out. Within a group, recipes that use more of
-   * your ingredients come first.
+   * A recipe only has to use one of your ingredients. Recipes missing more than 3 are
+   * left out. Within a group, recipes that use more of your ingredients come first.
    */
-  function groupRecipes(recipes, pantry, assumeStaples, maxMissing) {
+  function groupRecipes(recipes, pantry, basics, maxMissing) {
     const limit = maxMissing == null ? 3 : maxMissing;
     const groups = [];
     for (let i = 0; i <= limit; i++) {
       groups.push({ missing: i, title: GROUP_TITLES[i] || `Buy ${i} ingredients`, recipes: [] });
     }
     for (const recipe of recipes) {
-      const items = classifyIngredients(recipe, pantry, assumeStaples);
+      const items = classifyIngredients(recipe, pantry, basics);
       const need = items.filter((i) => i.status === 'need');
       const used = items.filter((i) => i.status === 'have').length;
       if (used === 0 || need.length > limit) continue;
       groups[need.length].recipes.push({ recipe, items, need, used });
     }
     for (const g of groups) {
-      g.recipes.sort((x, y) => y.used - x.used || x.recipe.name.localeCompare(y.recipe.name));
+      g.recipes.sort((x, y) => y.used - x.used
+        || x.recipe.ingredients.length - y.recipe.ingredients.length
+        || x.recipe.name.localeCompare(y.recipe.name));
     }
     return groups;
   }
@@ -164,7 +217,7 @@
   }
 
   const api = {
-    STAPLES, normalize, tokens, ingredientMatches, isStaple,
+    DEFAULT_BASICS, normalize, tokens, alternatives, ingredientMatches, basicMatches, coveredByBasics, isOptional, shortName,
     classifyIngredients, groupRecipes, splitSteps, dedupe,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

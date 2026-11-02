@@ -8,14 +8,18 @@
 
   const state = {
     pantry: load('pantry', []),
-    assumeStaples: load('staples', true),
+    basics: load('basics', Core.DEFAULT_BASICS.slice()),
     spoonKey: load('spoonKey', ''),
     recipes: [],   // recipes from the last search, from every source
     groups: [],
-    notices: [],   // e.g. a source that failed
+    found: [],     // per source: { name, count } or { name, error }
+    notices: [],
     searched: false,
     stale: false,  // ingredients changed since the last search
   };
+
+  // The old on/off switch for basics: off meant no basics.
+  if (load('staples', true) === false && load('basics', null) === null) state.basics = [];
 
   // ---- small helpers ----------------------------------------------------------------
 
@@ -50,16 +54,35 @@
   function plural(n, word) { return `${n} ${word}${n === 1 ? '' : 's'}`; }
 
   function listText(items) {
-    const names = items.map((i) => i.name.toLowerCase());
+    const names = items.map((i) => Core.shortName(i.name).toLowerCase());
     if (names.length <= 1) return names.join('');
     return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+  }
+
+  function splitList(text) {
+    return text.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  function chipList(items, onRemove, label) {
+    return items.map((name, i) =>
+      el('li', null, name,
+        el('button', { type: 'button', 'aria-label': `Remove ${name}${label}`, onclick: () => onRemove(i) }, '×')));
+  }
+
+  // A recipe photo, or the app's pot when a source has none.
+  function picture(src, alt, cls) {
+    if (!src) return el('div', { class: 'no-photo ' + (cls || ''), role: 'img', 'aria-label': alt || 'No photo' });
+    return el('img', {
+      src, alt: alt || '', loading: 'lazy', class: cls || null,
+      onerror: (e) => e.target.replaceWith(el('div', { class: 'no-photo ' + (cls || '') })),
+    });
   }
 
   // ---- recipe sources ---------------------------------------------------------------
 
   function renderSources() {
     const on = !!state.spoonKey;
-    $('sources-summary').textContent = on ? 'TheMealDB and Spoonacular' : 'TheMealDB only';
+    $('sources-summary').textContent = on ? '4 sources, including Spoonacular' : '3 free sources';
     $('spoon-key').value = '';
     $('spoon-key').placeholder = on ? 'Key saved in this browser' : 'Paste your Spoonacular API key';
     $('remove-key').hidden = !on;
@@ -78,7 +101,32 @@
     state.spoonKey = '';
     forget('spoonKey');
     renderSources();
-    $('key-msg').textContent = 'Removed. Only TheMealDB will be searched.';
+    $('key-msg').textContent = 'Removed. Spoonacular will no longer be searched.';
+  }
+
+  // ---- basics -----------------------------------------------------------------------
+
+  function renderBasics() {
+    $('basics-chips').replaceChildren(...chipList(state.basics, removeBasic, ' from basics'));
+    $('basics-summary').textContent = state.basics.length ? state.basics.join(', ') : 'none';
+  }
+
+  function basicsChanged() {
+    save('basics', state.basics);
+    renderBasics();
+    if (state.searched) regroup();
+  }
+
+  function addBasics(text) {
+    for (const b of splitList(text)) {
+      if (!state.basics.some((x) => Core.normalize(x) === Core.normalize(b))) state.basics.push(b);
+    }
+    basicsChanged();
+  }
+
+  function removeBasic(i) {
+    state.basics.splice(i, 1);
+    basicsChanged();
   }
 
   // ---- pantry -----------------------------------------------------------------------
@@ -90,9 +138,8 @@
   }
 
   function addIngredients(text) {
-    const parts = text.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
     let added = false;
-    for (const p of parts) {
+    for (const p of splitList(text)) {
       const exists = state.pantry.some((x) => Core.normalize(x) === Core.normalize(p));
       if (!exists) { state.pantry.push(p); added = true; }
     }
@@ -105,10 +152,7 @@
   }
 
   function renderPantry() {
-    const chips = $('chips');
-    chips.replaceChildren(...state.pantry.map((name, i) =>
-      el('li', null, name,
-        el('button', { type: 'button', 'aria-label': `Remove ${name}`, onclick: () => removeIngredient(i) }, '×'))));
+    $('chips').replaceChildren(...chipList(state.pantry, removeIngredient, ''));
     $('find').disabled = state.pantry.length === 0 && !$('ingredient-input').value.trim();
     $('clear').hidden = state.pantry.length === 0;
   }
@@ -121,48 +165,52 @@
     $('status-bar').style.width = Math.round((fraction || 0) * 100) + '%';
   }
 
+  function sources() {
+    // Order matters for duplicates: the first source's version of a recipe is kept.
+    const list = [
+      { name: 'TheMealDB', find: (p) => window.MealDB.findRecipes(p, { onProgress: setStatus }) },
+      { name: 'Wikibooks Cookbook', find: (p) => window.Wikibooks.findRecipes(p) },
+      { name: 'ForkRecipe', find: (p) => window.ForkRecipe.findRecipes(p) },
+    ];
+    if (state.spoonKey) list.push({ name: 'Spoonacular', find: (p) => window.Spoonacular.findRecipes(p, state.spoonKey) });
+    return list;
+  }
+
   async function search() {
     if (!state.pantry.length) return;
     $('find').disabled = true;
     $('results').replaceChildren();
-    setStatus('Starting…', 0);
+    setStatus('Searching recipes…', 0.02);
 
     const pantry = state.pantry.slice();
-    const useSpoon = !!state.spoonKey;
-    const [mealdb, spoon] = await Promise.allSettled([
-      window.MealDB.findRecipes(pantry, { onProgress: setStatus }),
-      useSpoon ? window.Spoonacular.findRecipes(pantry, state.spoonKey) : Promise.resolve([]),
-    ]);
+    const list = sources();
+    const results = await Promise.allSettled(list.map((s) => s.find(pantry)));
 
     state.notices = [];
-    if (mealdb.status === 'rejected') state.notices.push("TheMealDB couldn't be reached, so its recipes are missing.");
-    if (spoon.status === 'rejected') {
-      const e = spoon.reason || {};
-      state.notices.push((e.message || "Spoonacular couldn't be reached.") +
-        (e.status === 401 ? ' Check the key under Recipe sources.' : ' Only TheMealDB recipes are shown.'));
-    } else if (useSpoon) {
-      const left = window.Spoonacular.quotaLeft();
-      if (left != null) state.notices.push(`Spoonacular points left today: ${Math.max(0, Math.floor(left))}.`);
-    } else {
-      state.notices.push('Add a Spoonacular key under Recipe sources to search many more recipes.');
-    }
+    state.found = list.map((s, i) => {
+      const r = results[i];
+      if (r.status === 'fulfilled') return { name: s.name, recipes: r.value };
+      const e = r.reason || {};
+      let error = e.message || "couldn't be reached";
+      if (s.name === 'Spoonacular' && e.status === 401) error += ' Check the key under Recipe sources.';
+      return { name: s.name, error };
+    });
+    if (!state.spoonKey) state.notices.push('Add a Spoonacular key under Recipe sources to search hundreds of thousands more recipes.');
+    const left = state.spoonKey && window.Spoonacular.quotaLeft();
+    if (left != null && left !== '' && left !== false) state.notices.push(`Spoonacular points left today: ${Math.max(0, Math.floor(left))}.`);
 
     setStatus('');
     $('find').disabled = state.pantry.length === 0;
 
-    if (mealdb.status === 'rejected' && (spoon.status === 'rejected' || !useSpoon)) {
+    if (state.found.every((f) => f.error)) {
       $('results').replaceChildren(el('div', { class: 'card error' },
-        el('strong', null, "Couldn't reach the recipe services. "),
+        el('strong', null, "Couldn't reach any recipe source. "),
         'Check your internet connection and try again.',
-        state.notices.map((n) => el('div', { class: 'meta' }, n))));
+        state.found.map((f) => el('div', { class: 'meta' }, `${f.name}: ${f.error}`))));
       return;
     }
 
-    // TheMealDB first: its recipes are complete and cost no Spoonacular points to open.
-    state.recipes = Core.dedupe([
-      ...(mealdb.status === 'fulfilled' ? mealdb.value : []),
-      ...(spoon.status === 'fulfilled' ? spoon.value : []),
-    ]);
+    state.recipes = Core.dedupe(state.found.flatMap((f) => f.recipes || []));
     state.searched = true;
     state.stale = false;
     regroup();
@@ -170,12 +218,12 @@
   }
 
   function regroup() {
-    state.groups = Core.groupRecipes(state.recipes, state.pantry, state.assumeStaples, 3);
+    state.groups = Core.groupRecipes(state.recipes, state.pantry, state.basics, 3);
     renderResults();
   }
 
   const GROUP_SUBTITLES = [
-    'Everything you need is in your list.',
+    'Everything you need is in your list or your basics.',
     'One more ingredient to buy.',
     'Two more ingredients to buy.',
     'Three more ingredients to buy.',
@@ -183,13 +231,12 @@
 
   function recipeCard(entry) {
     const { recipe, need, used } = entry;
-    const thumb = recipe.thumb || recipe.image;
     return el('button', {
       type: 'button',
       class: 'card recipe-card',
-      onclick: () => { location.hash = 'recipe/' + recipe.id; },
+      onclick: () => { location.hash = 'recipe/' + encodeURIComponent(recipe.id); },
     },
-    el('img', { src: thumb, alt: '', loading: 'lazy', onerror: (e) => { if (e.target.src !== recipe.image) e.target.src = recipe.image; } }),
+    picture(recipe.thumb || recipe.image, '', 'thumb'),
     el('div', { class: 'body' },
       el('h3', null, recipe.name),
       el('div', { class: 'meta' }, `Uses ${used} of yours · ${plural(recipe.ingredients.length, 'ingredient')}`),
@@ -219,6 +266,20 @@
       more);
   }
 
+  // "Searched: TheMealDB 4 · Wikibooks Cookbook 7 · ForkRecipe 12 · Spoonacular failed"
+  function searchedLine() {
+    const shown = new Map();
+    for (const g of state.groups) for (const r of g.recipes) shown.set(r.recipe.sourceName, (shown.get(r.recipe.sourceName) || 0) + 1);
+    const parts = state.found.map((f) => {
+      if (f.error) return el('li', { class: 'failed' }, `${f.name}: ${f.error}`);
+      return el('li', null, `${f.name}: ${plural(shown.get(f.name) || 0, 'recipe')}`);
+    });
+    return el('div', { class: 'card notice searched' },
+      el('div', null, el('strong', null, 'Searched'), ' (recipes within 3 extra ingredients):'),
+      el('ul', null, parts),
+      state.notices.map((n) => el('div', null, n)));
+  }
+
   function renderResults() {
     if (!state.searched) return;
     const top = [];
@@ -228,26 +289,19 @@
         el('button', { type: 'button', class: 'btn link inline', onclick: search }, 'Find recipes again'),
         ' to update the list.'));
     }
-    if (state.notices.length) {
-      top.push(el('div', { class: 'card notice' }, state.notices.map((n) => el('div', null, n))));
-    }
+    top.push(searchedLine());
 
     const total = state.groups.reduce((n, g) => n + g.recipes.length, 0);
     if (!total) {
       $('results').replaceChildren(...top, el('div', { class: 'card error' },
         el('strong', null, 'No recipes found within 3 extra ingredients. '),
-        'Try adding more ingredients, or more general names, such as "chicken" rather than "chicken thighs".'));
+        'Try adding more ingredients or basics, or more general names, such as "chicken" rather than "chicken thighs".'));
       return;
     }
     $('results').replaceChildren(...top, ...state.groups.map(renderGroup));
   }
 
   // ---- recipe screen ----------------------------------------------------------------
-
-  function entryFor(recipe) {
-    const items = Core.classifyIngredients(recipe, state.pantry, state.assumeStaples);
-    return { recipe, items };
-  }
 
   function ingredientList(items, cls) {
     return el('ul', { class: 'ing ' + cls }, items.map((i) =>
@@ -281,10 +335,12 @@
 
   function renderRecipe(recipe, loadError) {
     const view = $('recipe-view');
-    const { items } = entryFor(recipe);
-    const have = items.filter((i) => i.status === 'have');
-    const need = items.filter((i) => i.status === 'need');
-    const basics = items.filter((i) => i.status === 'staple');
+    const items = Core.classifyIngredients(recipe, state.pantry, state.basics);
+    const by = (s) => items.filter((i) => i.status === s);
+    const have = by('have');
+    const need = by('need');
+    const basics = by('staple');
+    const optional = by('optional');
     const steps = recipe.steps || [];
     const done = new Set(load('done:' + recipe.id, []));
 
@@ -320,11 +376,18 @@
       method = el('p', { class: 'empty' }, 'This recipe has no written method. Try the original recipe link.');
     }
 
+    const credit = recipe.credit ? el('p', { class: 'credit' },
+      recipe.credit.text + ' ',
+      recipe.source ? el('a', { href: recipe.source, target: '_blank', rel: 'noopener' }, 'Original') : null,
+      ' · Licensed ',
+      el('a', { href: recipe.credit.licenceUrl, target: '_blank', rel: 'noopener' }, recipe.credit.licence),
+      recipe.sourceName === 'ForkRecipe' ? '. Not affiliated with ForkRecipe.' : '.') : null;
+
     view.replaceChildren(
       backButton(),
 
-      el('div', { class: 'card hero' }, el('div', { class: 'hero-inner' },
-        el('img', { src: recipe.image, alt: recipe.name }),
+      el('div', { class: 'card hero' + (recipe.image ? '' : ' no-image') }, el('div', { class: 'hero-inner' },
+        recipe.image ? picture(recipe.image, recipe.name) : null,
         el('div', { class: 'hero-text' },
           el('h2', null, recipe.name),
           el('div', { class: 'meta' }, [recipe.area, recipe.category, ...recipe.tags].filter(Boolean).join(' · ')),
@@ -341,14 +404,17 @@
       el('div', { class: 'detail-grid' },
         el('section', { class: 'card panel' },
           el('h3', null, 'Ingredients'),
+          recipe.note ? el('p', { class: 'steps-note' }, recipe.note) : null,
           need.length ? [el('h4', null, `To buy (${need.length})`), ingredientList(need, 'need'), copyBtn] : null,
           have.length ? [el('h4', null, `You have (${have.length})`), ingredientList(have, 'have')] : null,
-          basics.length ? [el('h4', null, `Basics (${basics.length})`), ingredientList(basics, 'staple')] : null),
+          basics.length ? [el('h4', null, `Your basics (${basics.length})`), ingredientList(basics, 'staple')] : null,
+          optional.length ? [el('h4', null, `Optional (${optional.length})`), ingredientList(optional, 'optional')] : null),
 
         el('section', { class: 'card panel' },
           el('h3', null, 'Method'),
           steps.length && !loadError ? el('p', { class: 'steps-note' }, 'Tick each step off as you go.') : null,
-          method)));
+          method)),
+      credit);
   }
 
   // ---- routing ----------------------------------------------------------------------
@@ -397,18 +463,20 @@
     renderPantry();
     $('results').replaceChildren();
   });
-  $('staples').checked = state.assumeStaples;
-  $('staples').addEventListener('change', (e) => {
-    state.assumeStaples = e.target.checked;
-    save('staples', state.assumeStaples);
-    if (state.searched) regroup();
-  });
+  const addBasicFromInput = () => {
+    addBasics($('basic-input').value);
+    $('basic-input').value = '';
+  };
+  $('add-basic').addEventListener('click', addBasicFromInput);
+  $('basic-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addBasicFromInput(); } });
+  $('reset-basics').addEventListener('click', () => { state.basics = Core.DEFAULT_BASICS.slice(); basicsChanged(); });
   $('save-key').addEventListener('click', saveKey);
   $('spoon-key').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveKey(); } });
   $('remove-key').addEventListener('click', removeKey);
   window.addEventListener('hashchange', route);
 
   renderSources();
+  renderBasics();
   renderPantry();
   route();
 })();

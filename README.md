@@ -1,94 +1,79 @@
 # Pantry Chef
 
-Type the ingredients you have, and Pantry Chef finds recipes online and groups them by how many
-more ingredients you'd need to buy. It searches two sources at once:
-
-- **[TheMealDB](https://www.themealdb.com)**: a few hundred recipes, always searched, no setup.
-- **[Spoonacular](https://spoonacular.com/food-api)**: hundreds of thousands of recipes gathered
-  from food websites and blogs. Searched when you add your free API key under **Recipe sources**.
-
-The same recipe from both sources is shown once. Each card says where it came from.
+Type the ingredients you have, and Pantry Chef finds recipes and groups them by how many more
+ingredients you'd need to buy. A recipe only has to use one of your ingredients; ones you listed
+but it doesn't use are ignored.
 
 | Group | Meaning |
 | --- | --- |
-| ✓ **Make it now** | Uses only what you have. |
+| ✓ **Make it now** | Everything it needs is in your list or your basics. |
 | +1 **Buy 1 ingredient** | Needs one ingredient you don't have. |
 | +2 **Buy 2 ingredients** | Needs two. |
 | +3 **Buy 3 ingredients** | Needs three. Recipes needing more are left out. |
 
+Within a group, recipes that use more of your ingredients come first, then simpler ones.
+
 Pick a recipe to see:
 
-- **Ingredients**, split into *To buy*, *You have* and *Basics*, each with its quantity, plus a
-  **Copy shopping list** button for the ones to buy.
+- **Ingredients**, split into *To buy*, *You have*, *Your basics* and *Optional*, each with its
+  quantity, plus a **Copy shopping list** button.
 - **Method**, as numbered steps you can tick off as you cook. Your ticks are remembered.
-- A count of ingredients, how many you have, how many to buy, and the number of steps, plus links
-  to the original recipe and video.
+- A count of ingredients, how many you have, how many to buy, and the number of steps, plus a link
+  to the original recipe and, for openly licensed recipes, its credit and licence.
 
-The **I have the basics** switch (on by default) treats salt, pepper, cooking oil and water as
-things you already have, so they don't push a recipe into a lower group.
+**Basics I always have** is your own list of things that never count as "to buy". It starts as
+salt, pepper, oil and water; add butter, flour, garlic or whatever is always in your kitchen.
+"Oil" covers olive and vegetable oil, and "pepper" covers black pepper but not red peppers.
+
+**Optional ingredients** (marked optional, or "to serve" / "to garnish") never count as "to buy".
+
+## Recipe sources
+
+All are searched at once; the same recipe from two sources is shown once. After each search the
+app lists how many recipes each source contributed, and says if a source couldn't be reached.
+
+| Source | Recipes | Setup | Licence |
+| --- | --- | --- | --- |
+| [TheMealDB](https://www.themealdb.com) | A few hundred | None (uses the public test key, fine for personal use) | Its API terms |
+| [Wikibooks Cookbook](https://en.wikibooks.org/wiki/Cookbook:Recipes) | A few thousand, simple and classic | None | CC BY-SA 4.0 |
+| [ForkRecipe open dataset](https://github.com/futurechef/forkrecipe-recipes) | 721 dishes, bundled in the app | None | CC BY-SA 4.0 |
+| [Spoonacular](https://spoonacular.com/food-api) | Hundreds of thousands, from food sites and blogs | Your free API key | Its API terms |
+
+- **Wikibooks Cookbook** is read through Wikimedia's official API. For each of your ingredients
+  the app searches the Cookbook, then reads the best pages' *Ingredients* and *Procedure* sections.
+  Volunteers write these pages in different styles, so now and then an ingredient line may be
+  read imperfectly.
+- **ForkRecipe** is a downloaded copy in `data/forkrecipe.json` (see `data/README.md`): stocks,
+  condiments, drinks and forks are left out. About half its recipes give quantities as proportions
+  rather than amounts; the recipe screen says so.
+- **Spoonacular**: add your key under **Recipe sources**. It's saved only in that browser, never in
+  this repository. Each search costs roughly 1–2 of your daily points and opening one of its
+  recipes about 1 more. If the key is rejected or the allowance is used up, the other sources
+  still work.
 
 ## Run it
 
-It's a static page with no build step and no server.
+It's a static site with no build step and no server.
 
-- Open `index.html` in a browser, or
-- serve the folder: `npx serve .` or `python3 -m http.server`, or
-- turn on GitHub Pages (Settings → Pages → Deploy from a branch → `main`, `/ (root)`), which
-  publishes it at `https://inobscurity.github.io/pantry_chef/`.
-
-## The Spoonacular key
-
-Get a free key from your [Spoonacular console](https://spoonacular.com/food-api/console) (Profile →
-Show API key), then paste it into **Recipe sources** in the app and press **Save**.
-
-- The key is saved only in that browser (its local storage). It is never in this repository, so
-  enter it once on each device you use.
-- The free plan has a daily allowance of "points". A search costs roughly 1–2 points, and opening
-  a Spoonacular recipe costs about 1 more (TheMealDB recipes cost nothing). After a search, the app
-  shows the points left today when Spoonacular reports them.
-- When the allowance is used up, or the key is rejected, the app says so and still shows
-  TheMealDB's recipes.
-
-## How it works
-
-```
- your ingredients ──▶ match to the database's ingredient names ("chicken" → Chicken, Chicken Breast…)
-                  ──▶ for each, list recipes that use it               (filter.php?i=…)
-                  ──▶ rank recipes by how many of yours they use, keep the top 80
-                  ──▶ fetch each one's ingredients and method          (lookup.php?i=…)
-                  ──▶ count what's missing, group into 0 / 1 / 2 / 3
-```
-
-Spoonacular is searched at the same time with one request (`findByIngredients`), which returns
-recipes with the ingredients you have and the ones you'd need. Its quantities and method are
-fetched only when you open one of its recipes (`/recipes/{id}/information`), to save points.
-
-Both sources answer browsers directly, so there is no server. Answers are cached for the browser
-session, so repeating a search or reopening a recipe is instant and costs no points. Changing the
-basics switch regroups straight away; changing your ingredients asks you to search again.
-
-**Matching ingredients.** Names are compared word by word after lower-casing, removing plurals
-("tomatoes" → "tomato") and dropping preparation words ("chopped", "fresh"). "Chicken" matches
-"Chicken Breast", and the other way round. Words that make a different product stop a match, so
-"chicken" doesn't match "Chicken Stock" and "garlic" doesn't match "Garlic Powder".
-
-**Steps.** Recipes write their method as numbered lines, "STEP 1" headings or one paragraph. The
-method is split on lines, labels like "Step 2:" or "3." are removed, and a long single paragraph is
-broken into steps of about two sentences.
+- It's published with GitHub Pages at https://inobscurity.github.io/pantry_chef/
+- To run it locally, serve the folder, for example `python3 -m http.server`, and open
+  http://localhost:8000. (Opening `index.html` directly works too, but without ForkRecipe, because
+  browsers don't let a file opened from disk load the recipe data.)
 
 ## Files
 
 | File | What it does |
 | --- | --- |
 | `index.html`, `styles.css` | The page. Works on phones, follows light and dark mode. |
-| `js/core.js` | Matching, grouping and step splitting. No network or page code. |
-| `js/mealdb.js` | Searches TheMealDB and turns its answers into recipes. |
-| `js/spoonacular.js` | Searches Spoonacular, and fetches a recipe's details when it's opened. |
+| `manifest.webmanifest`, `icons/` | Home-screen name and icon. |
+| `js/core.js` | Matching ingredients, basics, optional items, grouping, step splitting. |
+| `js/mealdb.js`, `js/wikibooks.js`, `js/forkrecipe.js`, `js/spoonacular.js` | One file per recipe source. |
 | `js/app.js` | The two screens: search with grouped results, and the recipe. |
-| `test/` | Tests, with the recipe services faked: `node --test test/*.test.js` |
+| `data/` | The bundled ForkRecipe data and its licence. |
+| `scripts/` | Rebuilds the ForkRecipe data from the dataset, reading its files without running them. |
+| `test/` | Tests, with the online services faked: `node --test test/*.test.js` |
 
 ## Ideas for later
 
-- Add Edamam as a third source (about 2 million recipes; it gives ingredients but not the method).
-- Let people edit the list of basics.
+- Add Edamam as another source (about 2 million recipes; it gives ingredients but not the method).
 - Filters for diet, cuisine or cooking time.

@@ -9,6 +9,7 @@ test('matches general and specific names both ways', () => {
   assert.ok(Core.ingredientMatches('tomatoes', 'Chopped Tomatoes'));
   assert.ok(Core.ingredientMatches('eggs', 'Egg'));
   assert.ok(Core.ingredientMatches('berries', 'Berry'));
+  assert.ok(Core.ingredientMatches('garlic', 'Garlic cloves, crushed whole'));
 });
 
 test('does not treat a derived product as the ingredient', () => {
@@ -19,13 +20,36 @@ test('does not treat a derived product as the ingredient', () => {
   assert.ok(!Core.ingredientMatches('coconut', 'Coconut Milk'));
 });
 
-test('staples match exactly', () => {
-  assert.ok(Core.isStaple('Salt'));
-  assert.ok(Core.isStaple('Olive Oil'));
-  assert.ok(!Core.isStaple('Red Pepper'));
+test('ignores notes in brackets and accepts any alternative', () => {
+  assert.ok(!Core.ingredientMatches('pepper', 'Seven-spice (allspice, cinnamon, black pepper)'));
+  assert.ok(Core.ingredientMatches('dashi', 'Warm water or dashi (around 60°C)'));
+  assert.ok(Core.ingredientMatches('lime', 'Lemon/lime juice'.replace(' juice', '')));
+  assert.ok(Core.ingredientMatches('cream', 'Cream — heavy or double'));
 });
 
-const R = (name, ...ings) => ({ id: name, name, ingredients: ings.map((n) => ({ name: n, measure: '1' })) });
+test('basics cover their everyday variants, but not different foods', () => {
+  const basics = Core.DEFAULT_BASICS;
+  const isBasic = (name) => Core.coveredByBasics(basics, name);
+  for (const yes of ['Salt', 'Fine sea salt', 'Kosher salt', 'Black pepper', 'Freshly ground black pepper',
+    'Olive oil', 'Extra virgin olive oil', 'Neutral oil', 'Vegetable oil', 'Water', 'Warm water', 'Boiling water',
+    'Salt and pepper', 'Warm water or dashi']) assert.ok(isBasic(yes), yes);
+  for (const no of ['Red pepper', 'Bell pepper', 'Sesame oil', 'Chilli oil', 'Celery salt', 'Coconut water', 'Garlic', 'Salt and sugar'])
+    assert.ok(!isBasic(no), no);
+  assert.ok(Core.basicMatches('flour', 'Plain flour'));
+  assert.ok(Core.basicMatches('butter', 'Unsalted butter'));
+  assert.ok(Core.basicMatches('garlic', 'Garlic cloves'));
+  assert.ok(!Core.basicMatches('sugar', 'Brown sugar'));
+});
+
+test('optional ingredients are recognised', () => {
+  assert.ok(Core.isOptional({ name: 'Parsley (optional)' }));
+  assert.ok(Core.isOptional({ name: 'Coriander', measure: 'to garnish' }));
+  assert.ok(Core.isOptional({ name: 'Lemon wedges, to serve' }));
+  assert.ok(Core.isOptional({ name: 'Chives', optional: true }));
+  assert.ok(!Core.isOptional({ name: 'Onion', measure: '1' }));
+});
+
+const R = (name, ...ings) => ({ id: name, name, ingredients: ings.map((n) => (typeof n === 'string' ? { name: n, measure: '1' } : n)) });
 
 test('groups by number of ingredients to buy', () => {
   const recipes = [
@@ -35,14 +59,39 @@ test('groups by number of ingredients to buy', () => {
     R('PlusThree', 'Chicken', 'Leek', 'Cream', 'Thyme'),
     R('PlusFour', 'Rice', 'A', 'B', 'C', 'D'),
     R('NoneOfMine', 'Beef', 'Salt'),
+    R('WithGarnish', 'Chicken', 'Rice', { name: 'Parsley', optional: true }, { name: 'Lime', measure: 'to serve' }),
   ];
-  const groups = Core.groupRecipes(recipes, ['chicken', 'rice'], true, 3);
+  const groups = Core.groupRecipes(recipes, ['chicken', 'rice'], Core.DEFAULT_BASICS, 3);
   assert.deepEqual(groups.map((g) => g.recipes.map((r) => r.recipe.name)),
-    [['Exact'], ['PlusOne'], ['PlusTwo'], ['PlusThree']]);
+    [['Exact', 'WithGarnish'], ['PlusOne'], ['PlusTwo'], ['PlusThree']]);
   assert.deepEqual(groups[1].recipes[0].need.map((i) => i.name), ['Onion']);
 
-  const noStaples = Core.groupRecipes(recipes, ['chicken', 'rice'], false, 3);
-  assert.equal(noStaples[1].recipes[0].recipe.name, 'Exact');
+  const noBasics = Core.groupRecipes(recipes, ['chicken', 'rice'], [], 3);
+  assert.equal(noBasics[1].recipes[0].recipe.name, 'Exact');
+
+  const moreBasics = Core.groupRecipes(recipes, ['chicken', 'rice'], ['salt', 'onion', 'milk', 'sugar'], 3);
+  assert.deepEqual(moreBasics[0].recipes.map((r) => r.recipe.name), ['Exact', 'PlusOne', 'WithGarnish', 'PlusTwo']);
+});
+
+test('a recipe only has to use one of your ingredients', () => {
+  const groups = Core.groupRecipes([R('Plain rice', 'Rice', 'Water', 'Salt')], ['chicken', 'rice', 'onion', 'carrot', 'cheese'], Core.DEFAULT_BASICS);
+  assert.equal(groups[0].recipes[0].recipe.name, 'Plain rice');
+});
+
+test('a source can decide which ingredients you have', () => {
+  const recipe = { ingredients: [
+    { name: 'Chicken thighs', have: true },
+    { name: 'Rice', have: false },
+    { name: 'Salt', have: false },
+    { name: 'Onion' },
+  ] };
+  const items = Core.classifyIngredients(recipe, ['onion'], Core.DEFAULT_BASICS);
+  assert.deepEqual(items.map((i) => i.status), ['have', 'need', 'staple', 'have']);
+});
+
+test('dedupe keeps the first recipe of each name', () => {
+  const out = Core.dedupe([{ name: 'Chicken Curry', id: 1 }, { name: 'chicken  curry!', id: 2 }, { name: 'Pie', id: 3 }]);
+  assert.deepEqual(out.map((r) => r.id), [1, 3]);
 });
 
 test('splits instructions into steps', () => {
@@ -54,18 +103,10 @@ test('splits instructions into steps', () => {
   assert.deepEqual(Core.splitSteps(''), []);
 });
 
-test('a source can decide which ingredients you have', () => {
-  const recipe = { ingredients: [
-    { name: 'Chicken thighs', have: true },
-    { name: 'Rice', have: false },
-    { name: 'Salt', have: false },
-    { name: 'Onion' },
-  ] };
-  const items = Core.classifyIngredients(recipe, ['onion'], true);
-  assert.deepEqual(items.map((i) => i.status), ['have', 'need', 'staple', 'have']);
-});
-
-test('dedupe keeps the first recipe of each name', () => {
-  const out = Core.dedupe([{ name: 'Chicken Curry', id: 1 }, { name: 'chicken  curry!', id: 2 }, { name: 'Pie', id: 3 }]);
-  assert.deepEqual(out.map((r) => r.id), [1, 3]);
+test('short names drop notes and preparation', () => {
+  assert.equal(Core.shortName('Waxy potatoes (Yukon Gold or similar), peeled and sliced 3 mm thin'), 'Waxy potatoes');
+  assert.equal(Core.shortName('Bone-in, skin-on chicken pieces (thighs and drumsticks)'), 'Bone-in, skin-on chicken pieces');
+  assert.equal(Core.shortName('Garlic cloves, crushed whole'), 'Garlic cloves');
+  assert.equal(Core.shortName('Seven-spice (baharat — allspice, clove)'), 'Seven-spice');
+  assert.equal(Core.shortName('Onion'), 'Onion');
 });

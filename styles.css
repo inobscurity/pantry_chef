@@ -126,6 +126,14 @@ a { color: var(--accent); }
 
 .actions { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
 
+.basics { margin-top: 14px; }
+.basics summary { cursor: pointer; color: var(--muted); font-size: 15px; }
+.basics summary span { color: var(--text); font-weight: 600; }
+.basics p { color: var(--muted); font-size: 15px; margin: 10px 0; }
+.basics .hint { font-size: 14px; margin: 6px 0 0; }
+.basics-chips { margin: 0 0 10px; }
+.basics-chips li { background: var(--basic-bg); color: var(--basic); }
+
 .keybox { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
 .keybox summary { cursor: pointer; color: var(--muted); font-size: 15px; }
 .keybox summary span { color: var(--text); font-weight: 600; }
@@ -137,6 +145,19 @@ a { color: var(--accent); }
 .notice.stale { color: var(--text); border-left: 4px solid var(--accent); }
 .notice.stale .btn.link { color: var(--accent); font-weight: 600; }
 .source-tag { font-size: 12px; color: var(--muted); margin-top: auto; }
+.searched ul { margin: 2px 0 4px; padding-left: 18px; }
+.searched .failed { color: var(--g3); }
+
+.no-photo {
+  background: var(--line) url("icons/icon.svg") center / 34% no-repeat;
+  opacity: .9;
+}
+.recipe-card .no-photo { width: 100%; aspect-ratio: 4 / 3; filter: grayscale(.35); }
+.hero.no-image .hero-inner { grid-template-columns: 1fr; }
+
+.ing.optional li { background: transparent; border: 1px dashed var(--line); }
+.ing.optional .name { color: var(--muted); }
+.credit { color: var(--muted); font-size: 13px; margin: 12px 4px 0; }
 .loading { color: var(--muted); }
 .from { margin-top: 12px; }
 
