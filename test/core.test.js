@@ -78,11 +78,11 @@ test('a recipe with more than twice as many ingredients as it takes from yours i
     R('Twice', 'Chicken', 'Leek', 'Cream', 'Thyme', 'Salt', 'Water'), // 4 counted (basics ignored), 2 yours: kept
     R('More', 'Chicken', 'Leek', 'Cream', 'Thyme', 'Bacon'),        // 5 counted, 2 yours: left out
     R('Garnish', 'Chicken', 'Leek', { name: 'Parsley', optional: true }), // optional doesn't count: kept
-    R('OnlyBasics', 'Chicken', 'Salt', 'Pepper', 'Oil', 'Water'),   // 1 counted, 1 yours: kept
+    R('OnlyBasics', 'Chicken', 'Salt', 'Pepper', 'Oil', 'Water'),   // only 1 of yours: left out (needs 2)
   ];
   // You listed chicken, leek and salt; salt is a basic, so it doesn't count on either side.
   const names = Core.groupRecipes(recipes, ['chicken', 'leek', 'salt'], Core.DEFAULT_BASICS, 3).flatMap((g) => g.recipes.map((r) => r.recipe.name));
-  assert.deepEqual(names.sort(), ['Garnish', 'OnlyBasics', 'Twice']);
+  assert.deepEqual(names.sort(), ['Garnish', 'Twice']);
 });
 
 test('with a main ingredient chosen, only recipes using it are shown', () => {
@@ -166,7 +166,9 @@ test('recipes are built around your main ingredients, not your salt and butter',
   ];
   const groups = Core.groupRecipes(recipes, pantry, Core.DEFAULT_BASICS, 3);
   const names = groups.map((g) => g.recipes.map((r) => r.recipe.name));
-  assert.deepEqual(names, [[], ['Pumpkin Soup'], [], []]); // butter baked onion uses only 2 of your 5
+  // Rösti and chapati use only salt, butter or pepper; butter baked onion uses your onion and butter,
+  // and its bouillon is your stock, so all of it is yours.
+  assert.deepEqual(names, [[], ['Pumpkin Soup', 'Butter Baked Onion'], [], []]);
 });
 
 test('only minor ingredients listed: they all count', () => {
@@ -186,16 +188,30 @@ test('real lines from Wikibooks pumpkin soups are read fairly', () => {
   assert.ok(Core.ingredientMatches('kumara', 'Sweet potato'));
 });
 
-test('a recipe must use at least half of the ingredients you listed, not counting basics', () => {
-  // 5 listed ingredients that aren't basics (salt and pepper are): a recipe needs 3 of them.
+test('a recipe must use at least 2 of the ingredients you listed, not counting basics', () => {
   const pantry = ['pumpkin', 'onion', 'butter', 'sour cream', 'chicken stock', 'salt', 'pepper'];
   const recipes = [
     R('Three of yours', 'Pumpkin', 'Onion', 'Butter', 'Milk', 'Salt'),
     R('Two of yours', 'Pumpkin', 'Onion', 'Milk', 'Salt', 'Pepper'),
-    R('Two plus basics', 'Pumpkin', 'Butter', 'Salt', 'Pepper', 'Water'),
+    R('One plus basics', 'Pumpkin', 'Salt', 'Pepper', 'Water'),
   ];
   const names = Core.groupRecipes(recipes, pantry, Core.DEFAULT_BASICS, 3).flatMap((g) => g.recipes.map((r) => r.recipe.name));
-  assert.deepEqual(names, ['Three of yours']);
+  assert.deepEqual(names.sort(), ['Three of yours', 'Two of yours']);
+});
+
+test('a long list still finds recipes: what matters is how much of the recipe is yours', () => {
+  const pantry = ['chard', 'cauliflower', 'chicken', 'onion', 'capsicum', 'carrots', 'rice', 'cream', 'cheese', 'ham', 'eggs'];
+  const recipes = [
+    R('Chicken creams', 'Chicken', 'Cream', 'Eggs', 'Salt'),           // 3 of 3 counted are yours
+    R('Chicken pie', 'Chicken', 'Ham', 'Pastry', 'Stock', 'Parsley'),  // 2 of 5: less than half yours
+  ];
+  const names = Core.groupRecipes(recipes, pantry, Core.DEFAULT_BASICS, 3, { main: 'chicken' }).flatMap((g) => g.recipes.map((r) => r.recipe.name));
+  assert.deepEqual(names, ['Chicken creams']);
+});
+
+test('with only one ingredient listed, a recipe needs just that one', () => {
+  const names = Core.groupRecipes([R('Boiled rice', 'Rice', 'Water', 'Salt')], ['rice'], Core.DEFAULT_BASICS).flatMap((g) => g.recipes.map((r) => r.recipe.name));
+  assert.deepEqual(names, ['Boiled rice']);
 });
 
 test('leaves and flowers are a different ingredient, except for herbs and leafy greens', () => {
