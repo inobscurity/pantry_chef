@@ -15,7 +15,8 @@
     'small', 'medium', 'whole', 'dried', 'raw', 'cooked', 'boneless', 'skinless', 'organic',
     'finely', 'roughly', 'thinly', 'peeled', 'crushed', 'beaten', 'softened', 'melted', 'cut',
     'into', 'piece', 'about', 'plus', 'for', 'serving', 'garnish', 'needed', 'optional',
-    'room', 'temperature', 'packed', 'heaped', 'level', 'good', 'quality',
+    'room', 'temperature', 'packed', 'heaped', 'level', 'good', 'quality', 'cubed', 'frying',
+    'deep', 'shallow', 'greasing', 'drizzling', 'nonfat', 'lowfat', 'sodium',
     'of', 'and', 'or', 'to', 'taste', 'a', 'an', 'the', 'some',
   ]);
 
@@ -42,6 +43,8 @@
     [/\bpeppercorns?\b/g, 'pepper'],
     [/\bsoured cream\b/g, 'sour cream'],
     [/\bbutternut squash\b/g, 'butternut pumpkin'],
+    [/\bsweet potato(e?s)?\b/g, 'kumara'],
+    [/\bpur[eé]e\b/g, 'puree'],
     [/\b(?:kabocha|winter) squash\b/g, 'pumpkin'],
     [/\bcapsicums?\b/g, 'bell pepper'],
     [/\baubergines?\b/g, 'eggplant'],
@@ -59,8 +62,8 @@
   // Pumpkin isn't pumpkin seeds, potato isn't sweet potato, milk isn't coconut milk.
   const DERIVED = new Set([
     'stock', 'broth', 'powder', 'sauce', 'paste', 'extract', 'essence', 'oil',
-    'vinegar', 'flour', 'milk', 'cream', 'butter', 'syrup', 'ketchup', 'jam', 'puree',
-    'seed', 'pepita', 'spice', 'flake', 'pie', 'sour', 'sweet', 'coconut', 'almond', 'oat',
+    'vinegar', 'flour', 'milk', 'cream', 'butter', 'syrup', 'ketchup', 'jam',
+    'seed', 'pepita', 'spice', 'flake', 'pie', 'sour', 'coconut', 'almond', 'oat',
     'soy', 'condensed', 'evaporated', 'powdered', 'icing', 'liqueur', 'wine',
   ]);
 
@@ -180,7 +183,9 @@
 
   // "Kosher salt and vanilla extract" is only covered if both parts are.
   function statusOf(ing, pantry, basics) {
-    const parts = shortName(ing.name).split(/\s+(?:and|&)\s+/i).filter(Boolean);
+    // Parts that only describe ("nonfat and low-sodium broth", "peeled and cubed") are ignored.
+    const describes = (part) => normalize(part).split(' ').every((w) => !w || NOISE.has(w) || BASIC_MODIFIERS.has(w));
+    const parts = shortName(ing.name).split(/\s+(?:and|&)\s+/i).filter((p) => p && !describes(p));
     if (parts.length > 1) {
       const has = parts.map((part) => pantry.some((p) => ingredientMatches(p, part)));
       const covered = parts.every((part, i) => has[i] || coveredByBasics(basics, part));

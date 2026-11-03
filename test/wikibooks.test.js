@@ -118,3 +118,10 @@ test('searches per ingredient and reads the best pages', async () => {
   assert.equal(search.searchParams.get('origin'), '*');
   assert.equal(search.searchParams.get('srsearch'), 'chicken ingredients');
 });
+
+test('reads the real Wikibooks pumpkin soup lines', () => {
+  const p = (s) => parseIngredient(s);
+  assert.deepEqual(p('2 cans (28 [[Cookbook:Ounce|oz]]) nonfat and low-sodium chicken [[Cookbook:Broth|broth]] or vegetable [[Cookbook:Stock|stock]]'),
+    { name: 'Nonfat and low-sodium chicken broth or vegetable stock', measure: '2 cans (28 oz)' });
+  assert.deepEqual(p('1 can (15 [[Cookbook:Ounce|oz]]) [[Cookbook:Pumpkin|pumpkin]]'), { name: 'Pumpkin', measure: '1 can (15 oz)' });
+});

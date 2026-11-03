@@ -197,7 +197,7 @@
       if (s.name === 'Spoonacular' && e.status === 401) error += ' Check the key under Recipe sources.';
       return { name: s.name, error };
     });
-    if (!state.spoonKey) state.notices.push('Add a Spoonacular key under Recipe sources to search hundreds of thousands more recipes.');
+    if (!state.spoonKey) state.notices.push('Add a Spoonacular key under Recipe sources to search more recipes from food websites and blogs.');
     const left = state.spoonKey && window.Spoonacular.quotaLeft();
     if (left != null && left !== '' && left !== false) state.notices.push(`Spoonacular points left today: ${Math.max(0, Math.floor(left))}.`);
 

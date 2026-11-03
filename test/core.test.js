@@ -149,3 +149,16 @@ test('recipes are built around your main ingredients, not your salt and butter',
 test('only minor ingredients listed: they all count', () => {
   assert.deepEqual(Core.mainIngredients(['butter', 'salt'], Core.DEFAULT_BASICS), ['butter', 'salt']);
 });
+
+test('real lines from Wikibooks pumpkin soups are read fairly', () => {
+  const pantry = ['pumpkin', 'onion', 'butter', 'sour cream', 'chicken stock', 'salt', 'pepper'];
+  const status = (name) => Core.classifyIngredients({ ingredients: [{ name }] }, pantry, Core.DEFAULT_BASICS)[0].status;
+  assert.equal(status('Nonfat and low-sodium chicken broth or vegetable stock'), 'have');
+  assert.equal(status('Medium sweet onion, chopped'), 'have');
+  assert.equal(status('Pumpkin purée'), 'have');
+  assert.equal(status('Oil for frying'), 'staple');
+  assert.equal(status('Peeled and cubed sweet potato'), 'need');
+  assert.equal(status('Cream'), 'need');
+  assert.ok(!Core.ingredientMatches('potato', 'Sweet potatoes'));
+  assert.ok(Core.ingredientMatches('kumara', 'Sweet potato'));
+});

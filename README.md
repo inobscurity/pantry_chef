@@ -40,7 +40,7 @@ app lists how many recipes each source contributed, and says if a source couldn'
 | [TheMealDB](https://www.themealdb.com) | A few hundred | None (uses the public test key, fine for personal use) | Its API terms |
 | [Wikibooks Cookbook](https://en.wikibooks.org/wiki/Cookbook:Recipes) | A few thousand, simple and classic | None | CC BY-SA 4.0 |
 | [ForkRecipe open dataset](https://github.com/futurechef/forkrecipe-recipes) | 721 dishes, bundled in the app | None | CC BY-SA 4.0 |
-| [Spoonacular](https://spoonacular.com/food-api) | Hundreds of thousands, from food sites and blogs | Your free API key | Its API terms |
+| [Spoonacular](https://spoonacular.com/food-api) | Thousands, from food sites and blogs (only 67 with pumpkin, mostly desserts) | Your free API key (50 points a day) | Its API terms |
 
 - **Wikibooks Cookbook** is read through Wikimedia's official API. For each of your ingredients
   the app searches the Cookbook, then reads the best pages' *Ingredients* and *Procedure* sections.

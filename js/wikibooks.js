@@ -89,6 +89,9 @@
     let name = text;
     const m = text.match(QUANTITY);
     if (m && !/^(a|an)$/i.test(m[1].trim())) { measure = m[1].trim(); name = m[2]; }
+    // "2 cans (28 oz) broth": the bracket belongs to the quantity.
+    const size = measure && name.match(/^(\([^)]*\))\s*(.+)$/);
+    if (size) { measure += ' ' + size[1]; name = size[2]; }
     const toTaste = /,?\s*\b(to taste|as needed|as required)\b\.?\s*$/i;
     if (toTaste.test(name)) {
       measure = measure || name.match(toTaste)[1].toLowerCase();
