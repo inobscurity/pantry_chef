@@ -277,3 +277,7 @@ a { color: var(--accent); }
   .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
   .top h1 { font-size: 24px; }
 }
+
+/* Ingredients made from another recipe of the same book */
+.ing.recipe li { background: transparent; border: 1px solid var(--line); }
+.recipe-link { font-weight: 600; }

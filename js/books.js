@@ -30,6 +30,7 @@
         const recipes = [];
         let r = 0;
         data.books.forEach((book, b) => {
+          book.start = r; // where this book's recipes begin, for following links
           for (let k = 0; k < book.count; k++, r++) {
             const [name, keys] = data.recipes[r];
             recipes.push({ b, k, name, keys });
@@ -136,31 +137,53 @@
     return shortlist.slice(0, MAX_CANDIDATES).map((s) => toRecipe(index, s.entry));
   }
 
-  /* Adds quantities and the method when a recipe is opened. */
+  /* One of a book's recipes by its id ("book-<book>-<k>"), for following a link. */
+  async function recipeById(id, { fetchImpl } = {}) {
+    const m = String(id).match(/^book-(.+)-(\d+)$/);
+    if (!m) return null;
+    const index = await loadIndex(fetchImpl);
+    const book = index.books.find((b) => b.id === m[1]);
+    const k = Number(m[2]);
+    if (!book || k >= book.count) return null;
+    return toRecipe(index, index.recipes[book.start + k]);
+  }
+
+  /*
+   * Adds quantities and the method when a recipe is opened. An ingredient that is another
+   * recipe of the book ("white broth (No. 99)") becomes a link, and so does "(No. 99)" in the
+   * method: the method holds ⟦k⟧ for those, listed in `links`.
+   */
   async function completeRecipe(recipe, { fetchImpl } = {}) {
     if (recipe.complete) return recipe;
     const [index, details] = await Promise.all([loadIndex(fetchImpl), loadBook(recipe.book, fetchImpl)]);
     const [ingredients, steps, time, serves] = details[recipe.k] || [[], [], '', ''];
+    const book = index.books.find((b) => b.id === recipe.book);
+    const linkTo = (k) => ({ id: `book-${recipe.book}-${k}`, name: index.recipes[book.start + k].name });
     // The book's own wording and quantities, matched by the same names as the search used,
-    // so the recipe screen agrees with the card.
+    // so the recipe screen agrees with the card. Linked recipes aren't in the search names.
     const keys = recipe.keys || [];
+    let next = 0;
+    const links = {};
+    for (const step of steps) for (const m of step.matchAll(/\u27e6(\d+)\u27e7/g)) links[m[1]] = linkTo(Number(m[1]));
     return Object.assign({}, recipe, {
       ingredients: ingredients.length
-        ? ingredients.map(([name, measure], i) => {
-          const key = keys[i];
+        ? ingredients.map(([name, measure, link]) => {
+          if (link !== undefined) return { name, measure, subRecipe: linkTo(link) };
+          const key = keys[next++];
           const optional = key !== undefined && key < 0;
           const match = key === undefined ? undefined : index.words[optional ? -key - 1 : key];
           return { name, measure, match, optional: optional || undefined };
         })
         : recipe.ingredients,
       steps,
+      links,
       category: time ? `Takes ${/\d/.test(time) ? time.charAt(0).toLowerCase() + time.slice(1) : time.toLowerCase()}` : '',
       tags: serves ? [`Serves ${serves.replace(/^for\s+/i, '')}`] : [],
       complete: true,
     });
   }
 
-  const api = { findRecipes, completeRecipe, _internal: { authorName, shortTitle, reset: () => { indexLoading = null; bookLoading.clear(); } } };
+  const api = { findRecipes, completeRecipe, recipeById, _internal: { authorName, shortTitle, reset: () => { indexLoading = null; bookLoading.clear(); } } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Books = api;
 })(typeof self !== 'undefined' ? self : this);

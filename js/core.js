@@ -279,7 +279,8 @@
     return recipe.ingredients.map((ing) => {
       // A source's own "you have this" is trusted; otherwise we check ourselves, because a
       // source is only searched with your main ingredients.
-      const status = ing.have === true ? 'have' : statusOf(ing, pantry, myBasics);
+      const status = ing.subRecipe ? 'recipe'                 // made from another of the book's recipes
+        : ing.have === true ? 'have' : statusOf(ing, pantry, myBasics);
       return Object.assign({}, ing, { status });
     });
   }
@@ -356,6 +357,11 @@
    *    however long your list is.
    *  - options.main: the ingredient you chose as the main one. Only recipes using it are shown.
    */
+  // A recipe's own ingredients, without the other recipes it's made from.
+  function ingredientsOf(recipe) {
+    return recipe.ingredients.filter((i) => !i.subRecipe);
+  }
+
   function groupRecipes(recipes, pantry, basics, maxMissing, options) {
     const main = options && options.main;
     const myBasics = basics || [];
@@ -371,25 +377,25 @@
       const need = items.filter((i) => i.status === 'need');
       const used = items.filter((i) => i.status === 'have').length;
       if (need.length > limit) continue;
-      if (main && !recipe.ingredients.some((i) => ingredientMatches(main, nameOf(i)))) continue;
-      const counted = items.filter((i) => i.status !== 'optional' && i.status !== 'staple' && !coveredByBasics(myBasics, nameOf(i)));
+      if (main && !ingredientsOf(recipe).some((i) => ingredientMatches(main, nameOf(i)))) continue;
+      const counted = items.filter((i) => i.status !== 'optional' && i.status !== 'staple' && i.status !== 'recipe' && !coveredByBasics(myBasics, nameOf(i)));
       const fromYours = counted.filter((i) => i.status === 'have').length;
       if (counted.length > 2 * fromYours) continue;
-      const usesListed = listed.filter((p) => recipe.ingredients.some((i) => ingredientMatches(p, nameOf(i)))).length;
+      const usesListed = listed.filter((p) => ingredientsOf(recipe).some((i) => ingredientMatches(p, nameOf(i)))).length;
       if (usesListed < Math.min(2, listed.length)) continue;
-      const usedMain = mains.filter((m) => recipe.ingredients.some((i) => ingredientMatches(m, nameOf(i)))).length;
+      const usedMain = mains.filter((m) => ingredientsOf(recipe).some((i) => ingredientMatches(m, nameOf(i)))).length;
       if (usedMain === 0) continue;
-      const usedYours = pantry.filter((p) => recipe.ingredients.some((i) => ingredientMatches(p, nameOf(i)))).length;
+      const usedYours = pantry.filter((p) => ingredientsOf(recipe).some((i) => ingredientMatches(p, nameOf(i)))).length;
       groups[need.length].recipes.push({ recipe, items, need, used, usedMain, usedYours });
     }
     // Between equally close recipes, ones using your less common ingredients come first:
     // for pumpkin and onion, a pumpkin dish before one more onion dish.
     const uses = new Map(pantry.map((p) => [p, 0]));
-    for (const g of groups) for (const e of g.recipes) for (const p of pantry) if (e.recipe.ingredients.some((i) => ingredientMatches(p, nameOf(i)))) uses.set(p, uses.get(p) + 1);
+    for (const g of groups) for (const e of g.recipes) for (const p of pantry) if (ingredientsOf(e.recipe).some((i) => ingredientMatches(p, nameOf(i)))) uses.set(p, uses.get(p) + 1);
     const total = groups.reduce((n, g) => n + g.recipes.length, 0) + 1;
     for (const g of groups) {
       for (const e of g.recipes) {
-        e.rarity = pantry.reduce((sum, p) => sum + (e.recipe.ingredients.some((i) => ingredientMatches(p, nameOf(i))) ? Math.log(total / (1 + uses.get(p))) : 0), 0);
+        e.rarity = pantry.reduce((sum, p) => sum + (ingredientsOf(e.recipe).some((i) => ingredientMatches(p, nameOf(i))) ? Math.log(total / (1 + uses.get(p))) : 0), 0);
       }
       g.recipes.sort((x, y) => y.usedYours - x.usedYours
         || y.rarity - x.rarity

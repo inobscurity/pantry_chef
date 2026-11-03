@@ -63,6 +63,12 @@ pattypan, scallop, button, yellow or summer squash. Spaghetti squash is its own 
 cookbooks, a plain "squash" means a winter squash, so it counts as pumpkin there (the recipe still
 shows the book's wording).
 
+**Recipes made from other recipes**: old cookbooks often build a dish from one of their own earlier
+recipes, such as "white broth (No. 99)" in Delmonico's or "Béchamel (see Sauces)" in Mrs Beeton. These
+are shown under *Made from other recipes*, linked to that recipe, and aren't counted as ingredients
+you have or need to buy; "(No. 99)" in a method is a link too. A reference that can't be matched to
+a recipe stays an ordinary ingredient.
+
 **Optional ingredients** (marked optional, or "to serve" / "to garnish") never count as "to buy".
 
 ## Recipe sources

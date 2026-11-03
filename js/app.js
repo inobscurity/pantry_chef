@@ -361,12 +361,20 @@
 
   let openToken = 0;
 
+  const linked = new Map(); // recipes opened by following a link, not part of the results
+
   async function openRecipe(id) {
-    const recipe = state.recipes.find((r) => r.id === id);
+    const token = ++openToken;
+    let recipe = state.recipes.find((r) => r.id === id) || linked.get(id);
+    if (!recipe && /^book-/.test(id)) {
+      $('recipe-view').replaceChildren(backButton(), el('div', { class: 'card panel loading' }, 'Loading…'));
+      try { recipe = await window.Books.recipeById(id); } catch (_) { recipe = null; }
+      if (token !== openToken) return;
+      if (recipe) linked.set(id, recipe);
+    }
     if (!recipe) { location.hash = ''; return; }
     if (recipe.complete) { renderRecipe(recipe); return; }
 
-    const token = ++openToken;
     $('recipe-view').replaceChildren(backButton(),
       el('div', { class: 'card panel loading' }, `Loading ${recipe.name}…`));
     try {
@@ -374,8 +382,12 @@
         ? await window.Books.completeRecipe(recipe)
         : await window.Spoonacular.completeRecipe(recipe, state.spoonKey);
       const i = state.recipes.findIndex((r) => r.id === id);
-      if (i >= 0) state.recipes[i] = full;
-      regroup(); // the full ingredient list can change which group it belongs in
+      if (i >= 0) {
+        state.recipes[i] = full;
+        regroup(); // the full ingredient list can change which group it belongs in
+      } else {
+        linked.set(id, full);
+      }
       if (token === openToken) renderRecipe(full);
     } catch (e) {
       if (token !== openToken) return;
@@ -391,6 +403,14 @@
     const need = by('need');
     const basics = by('staple');
     const optional = by('optional');
+    const fromRecipes = by('recipe');
+    const openLink = (link) => el('a', { href: '#recipe/' + encodeURIComponent(link.id), class: 'recipe-link' }, link.name);
+    // "Boil the carrots in white broth ⟦12⟧" → "… white broth (see Bouillon Blanc)"
+    const stepText = (text) => text.split(/\u27e6(\d+)\u27e7/).map((part, i) => {
+      if (i % 2 === 0) return part;
+      const link = recipe.links && recipe.links[part];
+      return link ? el('span', null, '(see ', openLink(link), ')') : '';
+    });
     const steps = recipe.steps || [];
     const done = new Set(load('done:' + recipe.id, []));
 
@@ -421,7 +441,7 @@
               save('done:' + recipe.id, [...done]);
             },
           }),
-          el('span', null, text)))));
+          el('span', null, stepText(text))))));
     } else {
       method = el('p', { class: 'empty' }, 'This recipe has no written method. Try the original recipe link.');
     }
@@ -459,7 +479,14 @@
           need.length ? [el('h4', null, `To buy (${need.length})`), ingredientList(need, 'need'), copyBtn] : null,
           have.length ? [el('h4', null, `You have (${have.length})`), ingredientList(have, 'have')] : null,
           basics.length ? [el('h4', null, `Your basics (${basics.length})`), ingredientList(basics, 'staple')] : null,
-          optional.length ? [el('h4', null, `Optional (${optional.length})`), ingredientList(optional, 'optional')] : null),
+          optional.length ? [el('h4', null, `Optional (${optional.length})`), ingredientList(optional, 'optional')] : null,
+          fromRecipes.length ? [
+            el('h4', null, `Made from other recipes (${fromRecipes.length})`),
+            el('ul', { class: 'ing recipe' }, fromRecipes.map((i) => el('li', null,
+              el('span', { class: 'name' }, i.name, ': ', openLink(i.subRecipe)),
+              el('span', { class: 'qty' }, i.measure)))),
+            el('p', { class: 'steps-note' }, "These are made with their own recipe from the same book. Their ingredients aren't counted above."),
+          ] : null),
 
         el('section', { class: 'card panel' },
           el('h3', null, 'Method'),
@@ -472,7 +499,7 @@
 
   function route() {
     const m = location.hash.match(/^#recipe\/(.+)$/);
-    const showRecipe = !!m && state.recipes.length > 0;
+    const showRecipe = !!m && (state.recipes.length > 0 || /^#recipe\/book-/.test(location.hash));
     $('search-view').hidden = showRecipe;
     $('recipe-view').hidden = !showRecipe;
     if (showRecipe) {

@@ -67,3 +67,34 @@ test('a book\'s plain squash counts as pumpkin, on the card and on the recipe sc
   assert.equal(squash.status, 'have');
   assert.match(squash.name, /^Squash, steamed and strained/); // shown as the book words it
 });
+
+test('an ingredient that is another recipe of the book links to it and isn\'t counted', async () => {
+  Books._internal.reset();
+  const index = JSON.parse(fs.readFileSync(path.join(DATA, 'data/books/index.json'), 'utf8'));
+  let start = 0;
+  const beeton = index.books.find((b) => { if (b.id === '10136') return true; start += b.count; return false; });
+  const k = index.recipes.slice(start, start + beeton.count).findIndex(([name]) => /^Potage Printanier/.test(name));
+  assert.ok(k >= 0, 'Mrs Beeton\'s spring soup');
+  const soup = await Books.completeRecipe(await Books.recipeById(`book-10136-${k}`, { fetchImpl }), { fetchImpl });
+  const stock = soup.ingredients.find((i) => i.subRecipe);
+  assert.ok(stock, 'its stock is another recipe');
+  assert.match(stock.subRecipe.name, /Stock/);
+  const items = Core.classifyIngredients(soup, ['stock', 'carrots'], Core.DEFAULT_BASICS);
+  assert.equal(items.find((i) => i.subRecipe).status, 'recipe'); // not "have", not "to buy"
+  // Following the link opens that recipe
+  const linked = await Books.completeRecipe(await Books.recipeById(stock.subRecipe.id, { fetchImpl }), { fetchImpl });
+  assert.equal(linked.name, stock.subRecipe.name);
+  assert.ok(linked.steps.length > 0);
+});
+
+test('"(No. 99)" in a method becomes a link', async () => {
+  Books._internal.reset();
+  const index = JSON.parse(fs.readFileSync(path.join(DATA, 'data/books/index.json'), 'utf8'));
+  let start = 0;
+  const delmonico = index.books.find((b) => { if (b.id === '60285') return true; start += b.count; return false; });
+  const k = index.recipes.slice(start, start + delmonico.count).findIndex(([name]) => name === 'Brunoise');
+  const soup = await Books.completeRecipe(await Books.recipeById(`book-60285-${k}`, { fetchImpl }), { fetchImpl });
+  const marked = soup.steps.join(' ').match(/⟦(\d+)⟧/);
+  assert.ok(marked, 'the method has links');
+  assert.ok(Object.values(soup.links).some((l) => l.name === 'Bouillon Blanc'), 'white broth (No. 99) is linked');
+});

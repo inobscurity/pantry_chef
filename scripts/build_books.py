@@ -76,7 +76,11 @@ def ingredients_in_prose(text):
         if key in seen:
             continue
         seen.add(key)
-        out.append([capital(name), ''])
+        ref = NUM_REF.match(text[m.end():].lstrip())
+        if ref:
+            out.append([capital(name), '', '#' + (ref.group(1) or ref.group(2))])
+        else:
+            out.append([capital(name), ''])
     return out
 
 # ---------------------------------------------------------------- ingredient lines ----
@@ -92,15 +96,34 @@ LIST_LINE = re.compile(rf"^(?:[*•-]\s*)?(?:{NUMBER}\b|[A-Z][a-z]+)")
 
 
 PREP_ONLY = re.compile(r'(?i)^(?:melted|beaten|chopped|sifted|grated|minced|sliced|diced|softened|warmed|scalded|'
-                       r'well beaten|finely chopped|to taste|or more|if liked|optional)$')
+                       r'well beaten|finely chopped|to taste|or more|if liked|optional|if in season|when in season|'
+                       r'seasoning to taste|seasoning|seasoning of salt and pepper|to serve|for serving)$')
+
+
+# References to another recipe in the same book: "white broth (No. 99)", "stock No. 105",
+# "Béchamel (see Sauces)", "beef stock, page 88". The reference is taken out of the name and kept
+# as a third item: "#99" (a recipe number) or "see" (find it by name).
+NUM_REF = re.compile(r'\(\s*(?:see\s+)?(?:No|Nos|Number|Recipe|Receipt)\.?\s*(\d{1,4})\s*\)|\b(?:see\s+)?No\.\s*(\d{1,4})\b', re.I)
+SEE_REF = re.compile(r'\(\s*see\s+[^)]{2,40}\)|,?\s*\(?\s*(?:see\s+)?(?:page|p\.)\s*\d{1,4}\s*\)?', re.I)
+
+
+def take_reference(text):
+    """(text without the reference, "#N" | "see" | None)"""
+    m = NUM_REF.search(text)
+    if m:
+        return (text[:m.start()] + text[m.end():]).strip(' ,;.'), '#' + (m.group(1) or m.group(2))
+    m = SEE_REF.search(text)
+    if m:
+        return (text[:m.start()] + text[m.end():]).strip(' ,;.'), 'see'
+    return text, None
 
 
 def parse_line(line):
     text = re.sub(r'^[*•\-]\s*', '', line.replace('\xa0', ' ')).strip()
+    text, ref = take_reference(text)
     text = re.sub(r'--\s*(?:\d+/\d+|\d+(?:\s+\d+/\d+)?)\s*[sd]\.?\s*$', '', text)  # Muskett's prices: "--4d."
     text = re.sub(r'\s*\.\s*$', '', text).strip(' ,;')
     text = re.sub(r'(?i)^(?:and|or|with)\s+', '', text)
-    text = re.sub(r'\s*\(?No\.\s*\d+\)?', '', text).strip(' ,;.')               # "stock No. 105"
     if not text:
         return None
     m = QUANTITY.match(text)
@@ -109,7 +132,8 @@ def parse_line(line):
         measure, name = '', text
     if not re.search(r'[a-z]', name, re.I) or PREP_ONLY.match(name.strip()):
         return None
-    return [name[:1].upper() + name[1:], measure]
+    item = [name[:1].upper() + name[1:], measure]
+    return item + [ref] if ref else item
 
 
 def parse_list_line(line):
@@ -117,8 +141,8 @@ def parse_list_line(line):
     t = re.sub(r'^[*•\-]\s*', '', line).strip()
     if re.search(r'\S\s{4,}\S', t):                                    # two columns
         return [p for part in re.split(r'\s{4,}', t) for p in parse_list_line(part)]
-    if t.count(',') >= 2 or re.search(r'\.\s+[A-Z0-9]', t):
-        return [p for p in (parse_line(x) for x in re.split(r',\s*|\.\s+(?=[A-Z0-9])', t)) if p]
+    if t.count(',') >= 2 or re.search(r'(?<!No)\.\s+[A-Z0-9]', t):        # not after "No." in "(No. 99)"
+        return [p for p in (parse_line(x) for x in re.split(r',\s*|(?<!No)\.\s+(?=[A-Z0-9])', t)) if p]
     item = parse_line(t)
     return [item] if item else []
 
@@ -158,6 +182,12 @@ def clean_markup(line):
     line = re.sub(r'(?<![\w_])_([^_\n]+)_(?![\w_])', r'\1', line)
     line = re.sub(r'=([^=\n]+)=', r'\1', line)
     return line
+
+
+def heading_number(raw):
+    """The recipe's number, if its heading starts with one: "99. Bouillon Blanc", "51—PROVENÇALE"."""
+    m = re.match(r'^\s*(?:No\.\s*)?(\d{1,4})[a-z]?\s*(?:\.|—|–|--)\s*\S', clean_markup(raw))
+    return int(m.group(1)) if m else None
 
 
 def heading_text(raw):
@@ -202,7 +232,8 @@ def inline_heading(text):
         return None
     letters = re.sub(r'[^A-Za-z]', '', name)
     words = [w for w in name.split() if len(w) > 3]
-    if not (letters.isupper() or (words and all(w[:1].isupper() for w in words))):
+    numbered = heading_number(text) is not None                 # "100. Consommé pure--…" is reliable
+    if not (letters.isupper() or numbered and name[:1].isupper() or (words and all(w[:1].isupper() for w in words))):
         return None
     return (capital(name) if letters.isupper() else name), m.group(2)
 
@@ -231,7 +262,9 @@ def to_steps(paras):
         if len(p) <= 320:
             steps.append(p)
             continue
-        sentences = re.findall(r'[^.!?]+[.!?]+(?:["\')\]]+)?|[^.!?]+$', p)
+        # Don't end a step at an abbreviation: "(No. 99)", "2 oz. butter", "1 lb. of beef".
+        p = re.sub(r'\b(No|Nos|oz|ozs|lb|lbs|tsp|tbsp|doz|pt|qt|gal|Mr|Mrs|Dr|St|fig|vol|pp?)\.(?=\s)', '\\1\u2024', p)
+        sentences = [s.replace('\u2024', '.') for s in re.findall(r'[^.!?]+[.!?]+(?:["\')\]]+)?|[^.!?]+$', p)]
         chunk = ''
         for s in sentences:
             if chunk and len(chunk) + len(s) > 260:
@@ -269,7 +302,8 @@ def finish(recipe):
     # Nothing else: the method also names the dish itself ("pour in the broth").
     if recipe['list']:
         have = {re.sub(r'(ies|es|s)$', '', i[0].lower()) for i in ingredients}
-        for name, _ in ingredients_in_prose(text):
+        for item in ingredients_in_prose(text):
+            name = item[0]
             key = re.sub(r'(ies|es|s)$', '', name.lower())
             if key not in SEASONINGS:
                 continue
@@ -279,11 +313,23 @@ def finish(recipe):
     if len(ingredients) < 2:
         return None
     name = re.sub(r"[\s,.;:'’\"*•\-]+$", '', recipe['name']).strip()
-    out = {'n': name, 'i': ingredients[:30], 'steps': to_steps(method)}
+    # Mrs Beeton's notes after the method aren't steps: "Seasonable from May to October.",
+    # "Sufficient for 8 persons." (kept as how many it serves), "Average cost, 1s."
+    steps = []
+    for step in to_steps(method):
+        note = re.match(r'(?i)^_?(seasonable|sufficient|average cost|time)\b[\s_.,:-]*(.*)$', step)
+        if note:
+            if note.group(1).lower() == 'sufficient' and not recipe.get('serves'):
+                recipe['serves'] = note.group(2).strip(' ._')[:60]
+            continue
+        steps.append(step)
+    out = {'n': name, 'i': ingredients[:30], 'steps': steps}
     if recipe.get('time'):
         out['t'] = recipe['time']
     if recipe.get('serves'):
         out['s'] = recipe['serves']
+    if recipe.get('num'):
+        out['num'] = recipe['num']
     return out
 
 
@@ -309,20 +355,22 @@ def read_book(text):
             name = heading_text(lines[0])
             if name:
                 close()
-                current = {'name': name, 'paras': [], 'list': []}
+                current = {'name': name, 'paras': [], 'list': [], 'num': heading_number(lines[0])}
                 continue
             if re.match(r'^\(.*\)$', joined.strip()) and current and not current['paras']:
                 continue                                                  # "(Zuppa di Zucca)"
 
-        label = re.match(r'^(?:\d+\.\s*)?(INGREDIENTS|Ingredients)\s*[.:]*\s*(?:--|—|:)\s*(.+)$', joined, re.S)
+        label = re.match(r'^(?:(\d+)\.\s*)?(INGREDIENTS|Ingredients)\s*[.:]*\s*(?:--|—|:)\s*(.+)$', joined, re.S)
         if label and current is not None:
+            if label.group(1) and not current.get('num'):
+                current['num'] = int(label.group(1))          # Mrs Beeton numbers her INGREDIENTS line
             raw = [clean_markup(l).replace('\xa0', ' ').strip() for l in lines]
             if len(raw) > 1 and all(l.endswith('.') for l in raw) and all(l.count(',') < 2 for l in raw):
                 # One per line: "Ingredients--4 oz. of Scotch barley. / 4 oz. of sliced onions."
                 raw[0] = re.sub(r'^(?:\d+\.\s*)?ingredients\s*[.:]*\s*(?:--|—|:)\s*', '', raw[0], flags=re.I)
                 current['list'] = [item for l in raw for item in parse_list_line(l)]
             else:
-                current['list'] = split_list_paragraph(label.group(2).replace('\xa0', ' '))
+                current['list'] = split_list_paragraph(label.group(3).replace('\xa0', ' '))
             continue
         meta = re.match(r'^(Mode|Method|Directions|Time|Average cost|Sufficient|Seasonable)\s*[.,]*\s*(?:--|—|:)\s*(.*)$', joined, re.S | re.I)
         if meta and current is not None:
@@ -338,7 +386,7 @@ def read_book(text):
         inline = inline_heading(joined) if not indented or len(lines) > 1 else None
         if inline and len(inline[1]) > 40:
             close()
-            current = {'name': inline[0], 'paras': [inline[1]], 'list': []}
+            current = {'name': inline[0], 'paras': [inline[1]], 'list': [], 'num': heading_number(joined)}
             continue
 
         if current is None:
@@ -438,6 +486,69 @@ def match_name(name, measure='', recipe_name=''):
     return n
 
 
+LINK = '\u27e6{}\u27e7'   # ⟦k⟧ in a method: a link to recipe k of the same book
+
+
+def name_words(name):
+    words = re.findall(r'[a-z]+', name.lower().replace('é', 'e').replace('è', 'e'))
+    stop = ('a', 'an', 'the', 'of', 'and', 'or', 'to', 'make', 'some', 'little')
+    return [re.sub(r'(?<=[^s])s$', '', w) for w in words if w not in stop]
+
+
+def link_references(recipes):
+    """Turns references into links to recipes of the same book, by number or by name.
+
+    An ingredient that is another recipe becomes [name, measure, k]; one whose recipe can't be
+    found stays an ordinary ingredient. In methods, a resolved "(No. 99)" becomes ⟦k⟧."""
+    by_num = {}
+    for k, r in enumerate(recipes):
+        if r.get('num') and r['num'] not in by_num:
+            by_num[r['num']] = k
+    names = [(k, name_words(r['n'])) for k, r in enumerate(recipes)]
+
+    def by_name(name, own):
+        """A recipe named like the reference: "Béchamel" → "Béchamel Sauce", "Espagnole" →
+        "Espagnole, or Brown Spanish Sauce". Its name must start with the referenced words, or
+        add at most two others."""
+        want = name_words(name)
+        if not want:
+            return -1
+        found = []
+        for k, words in names:
+            if k == own or not set(want) <= set(words):
+                continue
+            starts = words[:len(want)] == want
+            extra = len(words) - len(set(want))
+            if starts or extra <= 2:
+                found.append((0 if starts else 1, extra, k))
+        return min(found)[2] if found else -1
+
+    for own, r in enumerate(recipes):
+        items = []
+        for item in r['i']:
+            if len(item) < 3:
+                items.append(item)
+                continue
+            name, measure, ref = item
+            k = -1
+            if ref.startswith('#'):
+                k = by_num.get(int(ref[1:]), -1)                  # by number only: names are too loose
+                if k == own:
+                    k = -1
+            else:
+                k = by_name(name, own)
+            # Linked: [name, measure, k]. Not found: an ordinary ingredient, so nothing you'd need
+            # to buy is hidden.
+            items.append([name, measure, k] if k >= 0 else [name, measure])
+        r['i'] = items
+
+        def to_link(m):
+            k = by_num.get(int(m.group(1) or m.group(2)))
+            return LINK.format(k) if k is not None and k != own else m.group(0)
+        r['steps'] = [NUM_REF.sub(to_link, step) for step in r['steps']]
+    return recipes
+
+
 def readable(recipe, counts):
     """For scanned books: are the name and method made of real words?"""
     def ratio(text, minimum):
@@ -492,6 +603,7 @@ def main(argv):
                 from fix_long_s import word_counts
                 counts = word_counts(texts)
             recipes = [r for r in recipes if readable(r, counts)]
+        recipes = link_references(recipes)
         if report:
             print(f'{bid}\t{len(recipes)}\t{book["Title"][:70]!r}')
         if len(recipes) < min_recipes:
@@ -511,7 +623,10 @@ def main(argv):
             # Search needs only the name and what each ingredient is; quantities and the method
             # are in the book's own file, loaded when a recipe is opened.
             keys = []
-            for name, measure in r['i']:
+            for item in r['i']:
+                if len(item) > 2:
+                    continue                          # another recipe, not an ingredient to match
+                name, measure = item
                 k = word_id(match_name(name, measure, r['n']))
                 keys.append(-k - 1 if OPTIONAL.search(name + ' ' + measure) else k)
             index.append([r['n'], keys])

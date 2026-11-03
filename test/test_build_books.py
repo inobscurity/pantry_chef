@@ -30,7 +30,8 @@ class ReadBook(unittest.TestCase):
         [r] = self.read("BREAST OF LAMB AND GREEN PEAS.\n\n744. INGREDIENTS.--1 breast of lamb, a few slices of "
                         "bacon, 1/4 pint of\nstock No. 105, 1 lemon, 1 onion, 1 bunch of savoury herbs, green peas."
                         "\n\n_Mode_.--Remove the skin, put it into a saucepan of boiling water, and simmer it.")
-        self.assertEqual(r['i'][:3], [['Breast of lamb', '1'], ['A few slices of bacon', ''], ['Stock', '1/4 pint']])
+        self.assertEqual(r['i'][:3], [['Breast of lamb', '1'], ['A few slices of bacon', ''], ['Stock', '1/4 pint', '#105']])
+        self.assertEqual(r['num'], 744)
 
     def test_bullets_then_method(self):
         # Muskett
@@ -38,6 +39,24 @@ class ReadBook(unittest.TestCase):
                         "Peel and slice up the pumpkin, put it into a saucepan with the butter, and boil it.")
         self.assertEqual(r['i'][:2], [['Pumpkin', '1 small'], ['Butter', '2 oz.']])
         self.assertEqual(r['t'], 'One Hour')
+
+
+class References(unittest.TestCase):
+    def test_links_by_number_and_by_name(self):
+        text = WRAP.format(
+            "99. Bouillon Blanc--White broth.--Place a knuckle of veal in a large pot with water, boil it, and skim it well.\n\n"
+            "BECHAMEL SAUCE.\n\n1 pint of milk\n2 oz. of butter\n\nMelt the butter, stir in the flour, and add the milk.\n\n"
+            "100. Potage Printanier.--Boil the carrots in three pints of white broth (No. 99), season, and serve.\n\n"
+            "COD WITH SAUCE.\n\n1 lb. cod\n1/4 pint Béchamel (see Sauces)\n2 oz. butter (No. 999)\n\n"
+            "Boil the cod, and pour the béchamel over it.")
+        recipes = B.link_references(B.read_book(text))
+        names = [r['n'] for r in recipes]
+        printanier, cod = recipes[names.index('Potage Printanier')], recipes[names.index('Cod with Sauce')]
+        broth = names.index('Bouillon Blanc')
+        self.assertIn(['Broth', '', broth], printanier['i'])                       # by number, from the method
+        self.assertIn('\u27e6%d\u27e7' % broth, printanier['steps'][0])           # linked in the method
+        self.assertIn(['Béchamel', '1/4 pint', names.index('Bechamel Sauce')], cod['i'])  # by name
+        self.assertIn(['Butter', '2 oz.'], cod['i'])                 # can't be found: stays an ordinary ingredient
 
 
 class Squash(unittest.TestCase):
