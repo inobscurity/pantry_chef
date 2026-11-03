@@ -289,3 +289,23 @@ test('capsicums of every colour are one ingredient, and "red pepper" is one when
   assert.ok(!have(['pepper'], 'Red capsicum'));
   assert.ok(!have(['pepper'], 'Bell pepper'));
 });
+
+test('kinds of pumpkin are pumpkin, and squash is the Australian pattypan kind', () => {
+  const pumpkins = ['Butternut pumpkin', 'Butternut squash', 'Jap pumpkin', 'Kent pumpkin', 'Kabocha squash', 'Queensland Blue pumpkin',
+    'Jarrahdale pumpkin', 'Golden nugget pumpkins', 'Acorn squash', 'Buttercup squash', 'Hubbard squash', 'Sugar pumpkin', 'Winter squash'];
+  for (const b of pumpkins) {
+    assert.ok(Core.ingredientMatches('pumpkin', b), `pumpkin should cover ${b}`);
+    assert.ok(!Core.ingredientMatches('squash', b), `squash should not cover ${b}`);
+  }
+  // A particular kind covers a recipe that just says pumpkin
+  for (const a of ['butternut', 'butternut pumpkin', 'butternut squash', 'jap pumpkin', 'kent pumpkin']) {
+    assert.ok(Core.ingredientMatches(a, 'Pumpkin, peeled and diced'), `${a} should cover pumpkin`);
+  }
+  assert.ok(!Core.ingredientMatches('butternut', 'Jap pumpkin')); // different kinds stay different
+  for (const b of ['Pattypan squash', 'Patty pans', 'Scallop squash', 'Button squash', 'Yellow squash', 'Summer squash', 'Squash']) {
+    assert.ok(Core.ingredientMatches('squash', b), `squash should cover ${b}`);
+  }
+  assert.ok(!Core.ingredientMatches('pumpkin', 'Pattypan squash'));
+  assert.ok(!Core.ingredientMatches('squash', 'Zucchini'));
+  assert.ok(!Core.ingredientMatches('pumpkin', 'Spaghetti squash'));
+});

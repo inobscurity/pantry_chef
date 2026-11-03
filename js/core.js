@@ -41,8 +41,12 @@
   const SYNONYMS = [
     // Australian, British and American names for the same thing. Plurals are included because
     // these run before plurals are removed.
+    // Pumpkins: Australian kinds, and the American "winter squashes" that are pumpkins here.
     [/\bbutternut squash(?:es)?\b/g, 'butternut pumpkin'],
-    [/\b(?:kabocha|winter|japanese|jap) squash(?:es)?\b/g, 'pumpkin'],
+    [/\b(kent|jap|japanese|kabocha|queensland blue|jarrahdale|golden nugget|crown prince|ironbark|hubbard|acorn|buttercup|delicata|sugar|pie|blue|grey|gray)\s+(?:pumpkins?|squash(?:es)?)\b/g, '$1 pumpkin'],
+    [/\bwinter squash(?:es)?\b/g, 'pumpkin'],
+    // Squash, the Australian way: pattypan and other summer squashes (not zucchini).
+    [/\b(?:patty ?pans?(?: squash(?:es)?)?|scallop(?:ed|ini)? squash(?:es)?|button squash(?:es)?|yellow squash(?:es)?|summer squash(?:es)?|crookneck(?: squash(?:es)?)?)\b/g, 'squash'],
     [/\bsweet potato(?:e?s)?\b/g, 'kumara'],
     // Capsicums of any colour, also called bell peppers. Kept as "capsicum" so it never
     // matches plain "pepper", the spice.
@@ -199,7 +203,7 @@
   // is ketchup, and "shallots" are spring onions. Only your list is read this way; a recipe's
   // "tomato sauce" stays a cooked sauce, an old book's mushroom or walnut ketchup isn't tomato,
   // and a recipe's shallot is still a shallot.
-  const YOURS_ALSO = { 'tomato sauce': ['tomato ketchup'], shallot: ['spring onion'] };
+  const YOURS_ALSO = { 'tomato sauce': ['tomato ketchup'], shallot: ['spring onion'], butternut: ['butternut pumpkin'] };
 
   function ingredientMatches(have, needed) {
     const key = have + '\u0000' + needed;

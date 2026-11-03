@@ -55,6 +55,11 @@ prepared ("sliced", "stuffed"). Measured by the spoon or pinch, or written as ca
 flakes, it's the spice, as it usually is in old cookbooks. A plain "red pepper" is the spice; a
 plain "green pepper" is the vegetable. Capsicum never matches black pepper.
 
+**Pumpkins and squash**: kinds of pumpkin count as pumpkin: butternut (pumpkin or squash), Jap or
+Kent (kabocha), Queensland Blue, Jarrahdale, Golden Nugget, Ironbark, Crown Prince, and American
+"winter squashes" such as acorn, buttercup and Hubbard. "Squash" means the Australian kind:
+pattypan, scallop, button, yellow or summer squash. Spaghetti squash is its own ingredient.
+
 **Optional ingredients** (marked optional, or "to serve" / "to garnish") never count as "to buy".
 
 ## Recipe sources
