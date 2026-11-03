@@ -162,7 +162,7 @@
   function toggleMain(name) {
     setMain(Core.normalize(state.main) === Core.normalize(name) ? '' : name);
     renderPantry();
-    if (state.searched) { state.stale = true; regroup(); }
+    if (state.searched) regroup(); // the search covers every ingredient, so no new search is needed
   }
 
   function renderPantry() {
@@ -214,8 +214,11 @@
 
     // Search with your main ingredients: salt, butter and basics would otherwise pull in
     // every recipe that happens to use them.
-    // With a main ingredient chosen, the sources are searched for that ingredient alone.
-    const mains = state.main ? [state.main] : Core.mainIngredients(state.pantry, state.basics);
+    // Always search with all your main ingredients, so recipes that use more of yours are found.
+    // The main ingredient, if chosen, only filters what's shown (in regroup), so it never finds
+    // fewer recipes than a search without it.
+    const mains = Core.mainIngredients(state.pantry, state.basics);
+    if (state.main && !mains.some((m) => Core.normalize(m) === Core.normalize(state.main))) mains.unshift(state.main);
     const list = sources();
     const results = await Promise.allSettled(list.map((s) => s.find(mains)));
 
