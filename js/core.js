@@ -193,12 +193,18 @@
 
   // Does something you have (`have`) cover a recipe ingredient (`needed`)?
   const matchCache = new Map();
+  // What something in YOUR list also covers, in the Australian sense: bottled "tomato sauce"
+  // is ketchup. Only your list is read this way; a recipe's "tomato sauce" stays a cooked sauce,
+  // and an old book's mushroom or walnut ketchup isn't tomato.
+  const YOURS_ALSO = { 'tomato sauce': ['tomato ketchup'] };
+
   function ingredientMatches(have, needed) {
     const key = have + '\u0000' + needed;
     let v = matchCache.get(key);
     if (v === undefined) {
       if (matchCache.size > 500000) matchCache.clear();
       v = STRICT.has(normalize(have)) ? basicMatches(have, needed) : alternatives(needed).some((alt) => namesMatch(have, alt));
+      if (!v) v = (YOURS_ALSO[normalize(have)] || []).some((also) => alternatives(needed).some((alt) => namesMatch(also, alt)));
       matchCache.set(key, v);
     }
     return v;
@@ -216,8 +222,10 @@
 
   // Is a recipe ingredient covered by your basics? "Salt and pepper" needs both.
   function coveredByBasics(basics, needed) {
+    const covers = (b, part) => basicMatches(b, part)
+      || (YOURS_ALSO[normalize(b)] || []).some((also) => namesMatch(also, part));
     return alternatives(needed).some((alt) =>
-      alt.split(/\s+(?:and|&)\s+/i).every((part) => basics.some((b) => basicMatches(b, part))));
+      alt.split(/\s+(?:and|&)\s+/i).every((part) => basics.some((b) => covers(b, part))));
   }
 
   const OPTIONAL = /\boptional\b|\bto serve\b|\bfor serving\b|\bto garnish\b|\bfor garnish\b|\bgarnish\b/i;

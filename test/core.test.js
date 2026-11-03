@@ -233,3 +233,15 @@ test('different names for the same ingredient match both ways', () => {
     assert.ok(!Core.ingredientMatches(a, b), `${a} should not cover ${b}`);
   }
 });
+
+test('tomato sauce in your list counts as ketchup, the Australian way', () => {
+  for (const b of ['Ketchup', 'Tomato ketchup', 'Catsup', 'Tomato sauce']) {
+    assert.ok(Core.ingredientMatches('tomato sauce', b), `tomato sauce should cover ${b}`);
+    assert.ok(Core.coveredByBasics(['tomato sauce'], b), `tomato sauce as a basic should cover ${b}`);
+  }
+  for (const b of ['Mushroom ketchup', 'Walnut ketchup', 'Tomatoes']) {
+    assert.ok(!Core.ingredientMatches('tomato sauce', b), `tomato sauce should not cover ${b}`);
+  }
+  // Only your list is read the Australian way: ketchup in your list isn't a recipe's tomato sauce.
+  assert.ok(!Core.ingredientMatches('ketchup', 'Tomato sauce'));
+});

@@ -44,6 +44,9 @@ salt, pepper, oil and water; add butter, flour, garlic or whatever is always in 
 capsicum and bell pepper, zucchini and courgette, coriander and cilantro, rocket and arugula,
 silverbeet and Swiss chard, cornflour and cornstarch, plain and all-purpose flour, bicarb and
 baking soda, prawns and shrimp, mince and ground meat, and more (see `SYNONYMS` in `js/core.js`).
+**Tomato sauce** in your list or basics also counts as ketchup (the Australian meaning). A
+recipe's "tomato sauce" is still read as a cooked sauce, and old books' mushroom or walnut ketchup
+isn't covered.
 
 **Optional ingredients** (marked optional, or "to serve" / "to garnish") never count as "to buy".
 
