@@ -10,6 +10,7 @@
     pantry: load('pantry', []),
     basics: load('basics', Core.DEFAULT_BASICS.slice()),
     spoonKey: load('spoonKey', ''),
+    main: load('main', ''),  // the ingredient chosen as the main one; only recipes using it are shown
     recipes: [],   // recipes from the last search, from every source
     groups: [],
     found: [],     // per source: { name, count } or { name, error }
@@ -147,12 +148,40 @@
   }
 
   function removeIngredient(i) {
+    if (Core.normalize(state.pantry[i]) === Core.normalize(state.main)) setMain('');
     state.pantry.splice(i, 1);
     pantryChanged();
   }
 
+  // Tap an ingredient to make it the main one; tap it again to clear it.
+  function setMain(name) {
+    state.main = name;
+    if (name) save('main', name); else forget('main');
+  }
+
+  function toggleMain(name) {
+    setMain(Core.normalize(state.main) === Core.normalize(name) ? '' : name);
+    renderPantry();
+    if (state.searched) { state.stale = true; regroup(); }
+  }
+
   function renderPantry() {
-    $('chips').replaceChildren(...chipList(state.pantry, removeIngredient, ''));
+    if (state.main && !state.pantry.some((p) => Core.normalize(p) === Core.normalize(state.main))) setMain('');
+    const isMain = (name) => state.main && Core.normalize(name) === Core.normalize(state.main);
+    $('chips').replaceChildren(...state.pantry.map((name, i) =>
+      el('li', { class: isMain(name) ? 'main' : null },
+        el('button', {
+          type: 'button',
+          class: 'chip-name',
+          'aria-pressed': isMain(name) ? 'true' : 'false',
+          title: isMain(name) ? 'Main ingredient. Tap to clear.' : 'Tap to make this the main ingredient',
+          onclick: () => toggleMain(name),
+        }, isMain(name) ? '★ ' : '', name),
+        el('button', { type: 'button', 'aria-label': `Remove ${name}`, onclick: () => removeIngredient(i) }, '×'))));
+    $('main-hint').textContent = state.main
+      ? `Only recipes with ${state.main} are shown. Tap it again to show all.`
+      : 'Tap an ingredient to make it the main one: only recipes using it will be shown.';
+    $('main-hint').hidden = state.pantry.length === 0;
     $('find').disabled = state.pantry.length === 0 && !$('ingredient-input').value.trim();
     $('clear').hidden = state.pantry.length === 0;
   }
@@ -185,7 +214,8 @@
 
     // Search with your main ingredients: salt, butter and basics would otherwise pull in
     // every recipe that happens to use them.
-    const mains = Core.mainIngredients(state.pantry, state.basics);
+    // With a main ingredient chosen, the sources are searched for that ingredient alone.
+    const mains = state.main ? [state.main] : Core.mainIngredients(state.pantry, state.basics);
     const list = sources();
     const results = await Promise.allSettled(list.map((s) => s.find(mains)));
 
@@ -221,7 +251,7 @@
   }
 
   function regroup() {
-    state.groups = Core.groupRecipes(state.recipes, state.pantry, state.basics, 3);
+    state.groups = Core.groupRecipes(state.recipes, state.pantry, state.basics, 3, { main: state.main });
     renderResults();
   }
 
@@ -298,12 +328,18 @@
         ' to update the list.'));
     }
     top.push(searchedLine());
+    if (state.main) {
+      top.push(el('div', { class: 'card notice stale' },
+        el('strong', null, `★ ${state.main}`), ': only recipes using it are shown. ',
+        el('button', { type: 'button', class: 'btn link inline', onclick: () => toggleMain(state.main) }, 'Show all')));
+    }
 
     const total = state.groups.reduce((n, g) => n + g.recipes.length, 0);
     if (!total) {
       $('results').replaceChildren(...top, el('div', { class: 'card error' },
         el('strong', null, 'No recipes found within 3 extra ingredients. '),
-        'Try adding more ingredients or basics, or more general names, such as "chicken" rather than "chicken thighs".'));
+        'Try adding more ingredients or basics, or more general names, such as "chicken" rather than "chicken thighs".',
+        state.main ? ` Or clear ${state.main} as the main ingredient.` : ''));
       return;
     }
     $('results').replaceChildren(...top, ...state.groups.map(renderGroup));
@@ -467,6 +503,7 @@
     search();
   });
   $('clear').addEventListener('click', () => {
+    setMain('');
     state.pantry = [];
     save('pantry', state.pantry);
     state.searched = false;

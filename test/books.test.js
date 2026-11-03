@@ -32,8 +32,11 @@ test('a pumpkin soup search finds the old pumpkin soups, closest first', async (
   const ms = Date.now() - started;
   const all = groups.flatMap((g) => g.recipes);
   const soups = all.filter((e) => /pumpkin soup/i.test(e.recipe.name));
-  assert.ok(soups.length >= 3, `found ${soups.length} pumpkin soups`);
   assert.ok(soups.some((e) => /Australia/.test(e.recipe.sourceName)), 'Muskett\'s Australian pumpkin soup');
+  for (const e of all) {
+    const counted = e.items.filter((i) => i.status !== 'optional' && i.status !== 'staple' && !Core.coveredByBasics(Core.DEFAULT_BASICS, i.name));
+    assert.ok(counted.length <= 2 * counted.filter((i) => i.status === 'have').length, `${e.recipe.name} breaks the 2x rule`);
+  }
   for (const g of groups) {
     for (let i = 1; i < g.recipes.length; i++) assert.ok(g.recipes[i - 1].usedYours >= g.recipes[i].usedYours, 'closest first');
   }

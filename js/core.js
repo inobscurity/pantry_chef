@@ -261,8 +261,16 @@
    * ignored. Recipes missing more than 3 are left out. Within a group, the closest matches
    * come first: recipes that use more of the ingredients you listed, then more of your main
    * ones, then simpler ones. A recipe using just one of yours comes last.
+   *
+   * Two more rules:
+   *  - A recipe with more than twice as many ingredients as it takes from the ingredients
+   *    you listed is left out. Basics (salt, pepper… whatever is in your basics, even if you
+   *    also listed it) and optional ingredients don't count on either side.
+   *  - options.main: the ingredient you chose as the main one. Only recipes using it are shown.
    */
-  function groupRecipes(recipes, pantry, basics, maxMissing) {
+  function groupRecipes(recipes, pantry, basics, maxMissing, options) {
+    const main = options && options.main;
+    const myBasics = basics || [];
     const mains = mainIngredients(pantry, basics);
     const limit = maxMissing == null ? 3 : maxMissing;
     const groups = [];
@@ -274,6 +282,10 @@
       const need = items.filter((i) => i.status === 'need');
       const used = items.filter((i) => i.status === 'have').length;
       if (need.length > limit) continue;
+      if (main && !recipe.ingredients.some((i) => ingredientMatches(main, i.name))) continue;
+      const counted = items.filter((i) => i.status !== 'optional' && i.status !== 'staple' && !coveredByBasics(myBasics, i.name));
+      const fromYours = counted.filter((i) => i.status === 'have').length;
+      if (counted.length > 2 * fromYours) continue;
       const usedMain = mains.filter((m) => recipe.ingredients.some((i) => ingredientMatches(m, i.name))).length;
       if (usedMain === 0) continue;
       const usedYours = pantry.filter((p) => recipe.ingredients.some((i) => ingredientMatches(p, i.name))).length;

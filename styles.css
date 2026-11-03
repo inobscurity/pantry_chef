@@ -120,6 +120,10 @@ a { color: var(--accent); }
   border-radius: 50%;
 }
 .chips button:hover { background: rgba(0, 0, 0, .08); }
+.chips .chip-name { width: auto; height: auto; border-radius: 999px; font: inherit; font-weight: 500; padding: 0 2px; font-size: inherit; }
+.chips .chip-name:hover { background: none; text-decoration: underline; }
+.chips li.main { background: var(--accent); color: var(--accent-text); }
+.chips li.main .chip-name { font-weight: 700; }
 
 .toggle { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; color: var(--muted); font-size: 15px; }
 .toggle input { margin-top: 4px; accent-color: var(--accent); }

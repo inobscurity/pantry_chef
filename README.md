@@ -26,6 +26,13 @@ Pick a recipe to see:
 - A count of ingredients, how many you have, how many to buy, and the number of steps, plus a link
   to the original recipe and, for openly licensed recipes, its credit and licence.
 
+**Main ingredient**: tap one of your ingredients to make it the main one (it gets a ★). Only
+recipes using it are shown, and the sources are searched for it. Tap it again to show everything.
+
+**Too many extra ingredients**: a recipe with more than twice as many ingredients as it takes from
+your list is left out. Basics (in the recipe or in your list) and optional ingredients don't count
+either way. So a recipe using 3 of your ingredients may have at most 6.
+
 **Basics I always have** is your own list of things that never count as "to buy". It starts as
 salt, pepper, oil and water; add butter, flour, garlic or whatever is always in your kitchen.
 "Oil" covers olive and vegetable oil, and "pepper" covers black pepper but not red peppers.

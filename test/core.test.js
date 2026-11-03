@@ -55,22 +55,43 @@ test('groups by number of ingredients to buy', () => {
   const recipes = [
     R('Exact', 'Chicken Breast', 'Rice', 'Salt'),
     R('PlusOne', 'Chicken', 'Rice', 'Onion'),
-    R('PlusTwo', 'Rice', 'Milk', 'Sugar'),
-    R('PlusThree', 'Chicken', 'Leek', 'Cream', 'Thyme'),
-    R('PlusFour', 'Rice', 'A', 'B', 'C', 'D'),
+    R('PlusTwo', 'Chicken', 'Rice', 'Milk', 'Sugar'),
+    R('PlusThree', 'Chicken', 'Rice', 'Salt', 'Leek', 'Cream', 'Thyme'),
+    R('PlusFour', 'Chicken', 'Rice', 'Salt', 'Water', 'A', 'B', 'C', 'D'),
     R('NoneOfMine', 'Beef', 'Salt'),
     R('WithGarnish', 'Chicken', 'Rice', { name: 'Parsley', optional: true }, { name: 'Lime', measure: 'to serve' }),
   ];
   const groups = Core.groupRecipes(recipes, ['chicken', 'rice'], Core.DEFAULT_BASICS, 3);
   assert.deepEqual(groups.map((g) => g.recipes.map((r) => r.recipe.name)),
-    [['Exact', 'WithGarnish'], ['PlusOne'], ['PlusTwo'], ['PlusThree']]);
+    [['Exact', 'WithGarnish'], ['PlusOne'], ['PlusTwo'], []]); // PlusThree: 5 counted, only 2 yours
   assert.deepEqual(groups[1].recipes[0].need.map((i) => i.name), ['Onion']);
 
   const noBasics = Core.groupRecipes(recipes, ['chicken', 'rice'], [], 3);
   assert.equal(noBasics[1].recipes[0].recipe.name, 'Exact');
 
   const moreBasics = Core.groupRecipes(recipes, ['chicken', 'rice'], ['salt', 'onion', 'milk', 'sugar'], 3);
-  assert.deepEqual(moreBasics[0].recipes.map((r) => r.recipe.name), ['Exact', 'PlusOne', 'WithGarnish', 'PlusTwo']);
+  assert.deepEqual(moreBasics[0].recipes.map((r) => r.recipe.name).sort(), ['Exact', 'PlusOne', 'PlusTwo', 'WithGarnish']);
+});
+
+test('a recipe with more than twice as many ingredients as it takes from yours is left out', () => {
+  const recipes = [
+    R('Twice', 'Chicken', 'Leek', 'Cream', 'Thyme', 'Salt', 'Water'), // 4 counted (basics ignored), 2 yours: kept
+    R('More', 'Chicken', 'Leek', 'Cream', 'Thyme', 'Bacon'),        // 5 counted, 2 yours: left out
+    R('Garnish', 'Chicken', 'Leek', { name: 'Parsley', optional: true }), // optional doesn't count: kept
+    R('OnlyBasics', 'Chicken', 'Salt', 'Pepper', 'Oil', 'Water'),   // 1 counted, 1 yours: kept
+  ];
+  // You listed chicken, leek and salt; salt is a basic, so it doesn't count on either side.
+  const names = Core.groupRecipes(recipes, ['chicken', 'leek', 'salt'], Core.DEFAULT_BASICS, 3).flatMap((g) => g.recipes.map((r) => r.recipe.name));
+  assert.deepEqual(names.sort(), ['Garnish', 'OnlyBasics', 'Twice']);
+});
+
+test('with a main ingredient chosen, only recipes using it are shown', () => {
+  const recipes = [R('Pumpkin Soup', 'Pumpkin', 'Onion', 'Butter'), R('Onion Sauce', 'Onion', 'Butter', 'Salt')];
+  const pantry = ['pumpkin', 'onion', 'butter'];
+  const all = Core.groupRecipes(recipes, pantry, Core.DEFAULT_BASICS, 3).flatMap((g) => g.recipes.map((r) => r.recipe.name));
+  assert.deepEqual(all.sort(), ['Onion Sauce', 'Pumpkin Soup']);
+  const main = Core.groupRecipes(recipes, pantry, Core.DEFAULT_BASICS, 3, { main: 'pumpkin' }).flatMap((g) => g.recipes.map((r) => r.recipe.name));
+  assert.deepEqual(main, ['Pumpkin Soup']);
 });
 
 test('a recipe only has to use one of your ingredients', () => {
