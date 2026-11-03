@@ -96,7 +96,7 @@ It's a static site with no build step and no server.
 | `data/` | The bundled ForkRecipe data and its licence, and `data/books/` (classic cookbooks). |
 | `js/books.js` | Searches the classic cookbooks on the device; loads a book's methods when a recipe is opened. |
 | `scripts/` | Rebuild the bundled data: `build_forkrecipe.py`, and `build_books.py` with `fix_long_s.py` and `ingredients.txt` for the cookbooks. |
-| `test/` | Tests, with the online services faked: `node --test test/*.test.js` |
+| `test/` | Tests, with the online services faked: `node --test test/*.test.js`, and for the cookbook reader `python3 -m unittest discover -s test -p 'test_*.py'` |
 
 ## Ideas for later
 

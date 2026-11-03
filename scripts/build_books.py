@@ -96,7 +96,7 @@ PREP_ONLY = re.compile(r'(?i)^(?:melted|beaten|chopped|sifted|grated|minced|slic
 
 
 def parse_line(line):
-    text = re.sub(r'^[*•\-]\s*', '', line).strip()
+    text = re.sub(r'^[*•\-]\s*', '', line.replace('\xa0', ' ')).strip()
     text = re.sub(r'--\s*(?:\d+/\d+|\d+(?:\s+\d+/\d+)?)\s*[sd]\.?\s*$', '', text)  # Muskett's prices: "--4d."
     text = re.sub(r'\s*\.\s*$', '', text).strip(' ,;')
     text = re.sub(r'(?i)^(?:and|or|with)\s+', '', text)
@@ -243,6 +243,11 @@ def to_steps(paras):
     return steps
 
 
+SEASONINGS = {'salt', 'pepper', 'black pepper', 'white pepper', 'cayenne', 'nutmeg', 'mace', 'sugar', 'water',
+              'lemon juice', 'vinegar', 'mustard', 'parsley', 'paprika', 'clove', 'cinnamon', 'ginger',
+              'allspice', 'bay leaf', 'thyme', 'sweet herb'}
+
+
 def finish(recipe):
     """Turns a collected heading + paragraphs into a recipe, or None."""
     if not recipe or not recipe['paras'] and not recipe['list']:
@@ -260,11 +265,14 @@ def finish(recipe):
     ingredients = recipe['list'] or ingredients_in_prose(text)
     if not recipe['list'] and len(ingredients) > 16:
         return None                                                       # an essay, not a recipe
-    # A list sometimes misses things added in the method ("a little salt"); add those too.
+    # A list sometimes leaves out seasonings added in the method ("a little salt"); add those.
+    # Nothing else: the method also names the dish itself ("pour in the broth").
     if recipe['list']:
         have = {re.sub(r'(ies|es|s)$', '', i[0].lower()) for i in ingredients}
         for name, _ in ingredients_in_prose(text):
             key = re.sub(r'(ies|es|s)$', '', name.lower())
+            if key not in SEASONINGS:
+                continue
             if not any(key in h or h in key for h in have):
                 ingredients.append([name, ''])
                 have.add(key)
@@ -308,7 +316,13 @@ def read_book(text):
 
         label = re.match(r'^(?:\d+\.\s*)?(INGREDIENTS|Ingredients)\s*[.:]*\s*(?:--|—|:)\s*(.+)$', joined, re.S)
         if label and current is not None:
-            current['list'] = split_list_paragraph(label.group(2))
+            raw = [clean_markup(l).replace('\xa0', ' ').strip() for l in lines]
+            if len(raw) > 1 and all(l.endswith('.') for l in raw) and all(l.count(',') < 2 for l in raw):
+                # One per line: "Ingredients--4 oz. of Scotch barley. / 4 oz. of sliced onions."
+                raw[0] = re.sub(r'^(?:\d+\.\s*)?ingredients\s*[.:]*\s*(?:--|—|:)\s*', '', raw[0], flags=re.I)
+                current['list'] = [item for l in raw for item in parse_list_line(l)]
+            else:
+                current['list'] = split_list_paragraph(label.group(2).replace('\xa0', ' '))
             continue
         meta = re.match(r'^(Mode|Method|Directions|Time|Average cost|Sufficient|Seasonable)\s*[.,]*\s*(?:--|—|:)\s*(.*)$', joined, re.S | re.I)
         if meta and current is not None:
