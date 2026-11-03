@@ -93,9 +93,11 @@
       youtube: '',
       credit: credit(book),
       steps: [],
+      keys: entry.keys,
       ingredients: entry.keys.map((key) => {
         const optional = key < 0;
-        return { name: capitalise(index.words[optional ? -key - 1 : key]), measure: '', optional };
+        const word = index.words[optional ? -key - 1 : key];
+        return { name: capitalise(word), match: word, measure: '', optional };
       }),
       complete: false,
       completeWith: 'books',
@@ -137,12 +139,19 @@
   /* Adds quantities and the method when a recipe is opened. */
   async function completeRecipe(recipe, { fetchImpl } = {}) {
     if (recipe.complete) return recipe;
-    const details = await loadBook(recipe.book, fetchImpl);
+    const [index, details] = await Promise.all([loadIndex(fetchImpl), loadBook(recipe.book, fetchImpl)]);
     const [ingredients, steps, time, serves] = details[recipe.k] || [[], [], '', ''];
-    const optional = new Set(recipe.ingredients.filter((i) => i.optional).map((i) => i.name.toLowerCase()));
+    // The book's own wording and quantities, matched by the same names as the search used,
+    // so the recipe screen agrees with the card.
+    const keys = recipe.keys || [];
     return Object.assign({}, recipe, {
       ingredients: ingredients.length
-        ? ingredients.map(([name, measure]) => ({ name, measure, optional: optional.has(name.toLowerCase()) || undefined }))
+        ? ingredients.map(([name, measure], i) => {
+          const key = keys[i];
+          const optional = key !== undefined && key < 0;
+          const match = key === undefined ? undefined : index.words[optional ? -key - 1 : key];
+          return { name, measure, match, optional: optional || undefined };
+        })
         : recipe.ingredients,
       steps,
       category: time ? `Takes ${/\d/.test(time) ? time.charAt(0).toLowerCase() + time.slice(1) : time.toLowerCase()}` : '',

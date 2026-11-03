@@ -55,3 +55,15 @@ test('opening a book recipe loads its quantities and method', async () => {
   assert.equal(full.credit.licence, 'Public domain');
   assert.match(full.credit.text, /Muskett/);
 });
+
+test('a book\'s plain squash counts as pumpkin, on the card and on the recipe screen', async () => {
+  Books._internal.reset();
+  const pantry = ['pumpkin', 'cream', 'sugar', 'eggs', 'brandy'];
+  const found = await Books.findRecipes(['pumpkin'], { fetchImpl, pantry, basics: Core.DEFAULT_BASICS });
+  const pie = found.find((r) => r.name === 'Squash Pie II');
+  assert.ok(pie, 'Fannie Farmer\'s squash pie is found by pumpkin');
+  const full = await Books.completeRecipe(pie, { fetchImpl });
+  const squash = Core.classifyIngredients(full, pantry, Core.DEFAULT_BASICS).find((i) => /^squash/i.test(i.name));
+  assert.equal(squash.status, 'have');
+  assert.match(squash.name, /^Squash, steamed and strained/); // shown as the book words it
+});

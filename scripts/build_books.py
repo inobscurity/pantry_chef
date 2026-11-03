@@ -426,7 +426,12 @@ def match_name(name, measure=''):
     """What an ingredient is, for searching: "Squash, steamed and strained" → "squash"."""
     n = re.sub(r'\([^)]*\)', ' ', pepper_as_capsicum(name, measure))
     n = re.split(r',|;|\s[—–]\s', n)[0]
-    return re.sub(r'\s+', ' ', n).strip().lower() or name.lower()
+    n = re.sub(r'\s+', ' ', n).strip().lower() or name.lower()
+    # Old American books mean a winter squash by plain "squash": in Australian terms, pumpkin.
+    # Summer, yellow, pattypan, scallop, button, crookneck and spaghetti squash keep their names.
+    if re.fullmatch(r'(?:(?:fresh|young|ripe|winter|cooked|stewed|boiled|mashed|strained|sifted|steamed|baked|dry|nice|good|large|small)\s+)*squash(?:es)?', n):
+        return 'pumpkin'
+    return n
 
 
 def readable(recipe, counts):

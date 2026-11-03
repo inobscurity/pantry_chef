@@ -58,7 +58,9 @@ plain "green pepper" is the vegetable. Capsicum never matches black pepper.
 **Pumpkins and squash**: kinds of pumpkin count as pumpkin: butternut (pumpkin or squash), Jap or
 Kent (kabocha), Queensland Blue, Jarrahdale, Golden Nugget, Ironbark, Crown Prince, and American
 "winter squashes" such as acorn, buttercup and Hubbard. "Squash" means the Australian kind:
-pattypan, scallop, button, yellow or summer squash. Spaghetti squash is its own ingredient.
+pattypan, scallop, button, yellow or summer squash. Spaghetti squash is its own ingredient. In the classic
+cookbooks, a plain "squash" means a winter squash, so it counts as pumpkin there (the recipe still
+shows the book's wording).
 
 **Optional ingredients** (marked optional, or "to serve" / "to garnish") never count as "to buy".
 

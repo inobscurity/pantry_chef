@@ -40,6 +40,14 @@ class ReadBook(unittest.TestCase):
         self.assertEqual(r['t'], 'One Hour')
 
 
+class Squash(unittest.TestCase):
+    def test_plain_squash_in_old_books_is_pumpkin(self):
+        self.assertEqual(B.match_name('Squash, steamed and strained', '1 cup'), 'pumpkin')
+        self.assertEqual(B.match_name('Winter squash'), 'pumpkin')
+        self.assertEqual(B.match_name('Summer squash'), 'summer squash')
+        self.assertEqual(B.match_name('Spaghetti squash'), 'spaghetti squash')
+
+
 class Peppers(unittest.TestCase):
     def test_red_pepper_is_capsicum_only_when_its_the_vegetable(self):
         self.assertEqual(B.match_name('Red peppers, sliced', '2'), 'capsicum')

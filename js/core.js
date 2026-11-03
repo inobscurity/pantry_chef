@@ -256,7 +256,10 @@
   }, 50000);
 
   // The name a recipe ingredient is matched by.
+  // A source can say what an ingredient is for matching (`match`), separately from how the
+  // recipe words it: the classic cookbooks' "Squash" is matched as pumpkin.
   function nameOf(ing) {
+    if (ing.match) return ing.match;
     return nameOfNow(`${ing.name || ''}\u0000${ing.measure || ''}`);
   }
 
