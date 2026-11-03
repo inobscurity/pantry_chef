@@ -74,7 +74,22 @@
     return word;
   }
 
-  function normalize(name) {
+  // The same names are compared thousands of times in a search, so results are remembered.
+  function remember(fn, limit) {
+    const cache = new Map();
+    return (key) => {
+      let v = cache.get(key);
+      if (v === undefined) {
+        if (cache.size > limit) cache.clear();
+        v = fn(key);
+        cache.set(key, v);
+      }
+      return v;
+    };
+  }
+
+  const normalize = remember(normalizeNow, 200000);
+  function normalizeNow(name) {
     let s = String(name || '')
       .toLowerCase()
       .normalize('NFD').replace(/[̀-ͯ]/g, ''); // jalapeño -> jalapeno
@@ -87,7 +102,8 @@
       .join(' ');
   }
 
-  function tokens(name) {
+  const tokens = remember(tokensNow, 200000);
+  function tokensNow(name) {
     const all = normalize(name).split(' ').filter(Boolean);
     const meaningful = all.filter((w) => !NOISE.has(w));
     return meaningful.length ? meaningful : all;
@@ -95,7 +111,8 @@
 
   // What a recipe's ingredient is, without notes: "Garlic (grated to a paste)" → "Garlic".
   // "Water or dashi" and "lemon/lime juice" give each alternative.
-  function alternatives(name) {
+  const alternatives = remember(alternativesNow, 200000);
+  function alternativesNow(name) {
     const core = String(name || '')
       .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
       .split(/\s[—–]\s|:/)[0];
@@ -133,9 +150,16 @@
   }
 
   // Does something you have (`have`) cover a recipe ingredient (`needed`)?
+  const matchCache = new Map();
   function ingredientMatches(have, needed) {
-    if (STRICT.has(normalize(have))) return basicMatches(have, needed);
-    return alternatives(needed).some((alt) => namesMatch(have, alt));
+    const key = have + '\u0000' + needed;
+    let v = matchCache.get(key);
+    if (v === undefined) {
+      if (matchCache.size > 500000) matchCache.clear();
+      v = STRICT.has(normalize(have)) ? basicMatches(have, needed) : alternatives(needed).some((alt) => namesMatch(have, alt));
+      matchCache.set(key, v);
+    }
+    return v;
   }
 
   // Is a recipe ingredient one of your basics? Stricter than ingredientMatches.
@@ -200,7 +224,7 @@
   function dedupe(recipes) {
     const seen = new Set();
     return recipes.filter((r) => {
-      const key = normalize(r.name);
+      const key = r.dedupeKey || normalize(r.name); // books may share dish names, so they say what counts
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -234,8 +258,9 @@
   /*
    * Puts recipes into four groups by how many ingredients you'd need to buy (0–3).
    * A recipe must use at least one of your main ingredients; ones it doesn't use are
-   * ignored. Recipes missing more than 3 are left out. Within a group, recipes that use
-   * more of your main ingredients come first, then more of all yours, then simpler ones.
+   * ignored. Recipes missing more than 3 are left out. Within a group, the closest matches
+   * come first: recipes that use more of the ingredients you listed, then more of your main
+   * ones, then simpler ones. A recipe using just one of yours comes last.
    */
   function groupRecipes(recipes, pantry, basics, maxMissing) {
     const mains = mainIngredients(pantry, basics);
@@ -248,12 +273,24 @@
       const items = classifyIngredients(recipe, pantry, basics);
       const need = items.filter((i) => i.status === 'need');
       const used = items.filter((i) => i.status === 'have').length;
+      if (need.length > limit) continue;
       const usedMain = mains.filter((m) => recipe.ingredients.some((i) => ingredientMatches(m, i.name))).length;
-      if (usedMain === 0 || need.length > limit) continue;
-      groups[need.length].recipes.push({ recipe, items, need, used, usedMain });
+      if (usedMain === 0) continue;
+      const usedYours = pantry.filter((p) => recipe.ingredients.some((i) => ingredientMatches(p, i.name))).length;
+      groups[need.length].recipes.push({ recipe, items, need, used, usedMain, usedYours });
     }
+    // Between equally close recipes, ones using your less common ingredients come first:
+    // for pumpkin and onion, a pumpkin dish before one more onion dish.
+    const uses = new Map(pantry.map((p) => [p, 0]));
+    for (const g of groups) for (const e of g.recipes) for (const p of pantry) if (e.recipe.ingredients.some((i) => ingredientMatches(p, i.name))) uses.set(p, uses.get(p) + 1);
+    const total = groups.reduce((n, g) => n + g.recipes.length, 0) + 1;
     for (const g of groups) {
-      g.recipes.sort((x, y) => y.usedMain - x.usedMain
+      for (const e of g.recipes) {
+        e.rarity = pantry.reduce((sum, p) => sum + (e.recipe.ingredients.some((i) => ingredientMatches(p, i.name)) ? Math.log(total / (1 + uses.get(p))) : 0), 0);
+      }
+      g.recipes.sort((x, y) => y.usedYours - x.usedYours
+        || y.rarity - x.rarity
+        || y.usedMain - x.usedMain
         || y.used - x.used
         || x.recipe.ingredients.length - y.recipe.ingredients.length
         || x.recipe.name.localeCompare(y.recipe.name));

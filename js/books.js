@@ -1,0 +1,157 @@
+/*
+ * Recipes from public-domain cookbooks (Project Gutenberg, and Hannah Glasse's 1747 book from
+ * the Internet Archive), read by scripts/build_books.py into data/books/.
+ *
+ * data/books/index.json is downloaded on the first search and kept by the browser. It lists
+ * each recipe's name and what its ingredients are, as numbers into a shared list of names.
+ * Quantities and the method are in each book's own file, fetched when a recipe is opened.
+ */
+(function (root) {
+  'use strict';
+
+  const Core = root.RecipeCore || (typeof require !== 'undefined' ? require('./core.js') : null);
+  const MAX_MISSING = 5;        // shortlist recipes needing up to this many things (the app shows up to 3)
+  const MAX_CANDIDATES = 6000;  // safety limit on the shortlist
+
+  let indexLoading = null;
+  const bookLoading = new Map();
+
+  function getJSON(path, fetchImpl) {
+    return (fetchImpl || root.fetch.bind(root))(path).then((res) => {
+      if (!res.ok) throw new Error(`Cookbook data answered ${res.status}`);
+      return res.json();
+    });
+  }
+
+  function loadIndex(fetchImpl) {
+    if (!indexLoading) {
+      indexLoading = getJSON('data/books/index.json', fetchImpl).then((data) => {
+        // Unpack recipes once: [{ book, k, name, keys }]
+        const recipes = [];
+        let r = 0;
+        data.books.forEach((book, b) => {
+          for (let k = 0; k < book.count; k++, r++) {
+            const [name, keys] = data.recipes[r];
+            recipes.push({ b, k, name, keys });
+          }
+        });
+        return { books: data.books, words: data.words, recipes };
+      }).catch((e) => { indexLoading = null; throw e; });
+    }
+    return indexLoading;
+  }
+
+  function loadBook(id, fetchImpl) {
+    if (!bookLoading.has(id)) {
+      bookLoading.set(id, getJSON(`data/books/${encodeURIComponent(id)}.json`, fetchImpl)
+        .catch((e) => { bookLoading.delete(id); throw e; }));
+    }
+    return bookLoading.get(id);
+  }
+
+  function shortTitle(title) {
+    return title.split(/[:;\n]|\s—\s/)[0].replace(/\s*\(\d{4}\)\s*$/, '').trim();
+  }
+
+  function authorName(author) {
+    // "Beeton, Mrs. (Isabella Mary)" → "Mrs. Beeton"; "Farmer, Fannie Merritt" → "Fannie Merritt Farmer"
+    const first = String(author || '').split(';')[0].trim();
+    const m = first.match(/^([^,]+),\s*([^(]+?)\s*(?:\(.*\))?$/);
+    return m ? `${m[2].trim()} ${m[1].trim()}` : first;
+  }
+
+  function credit(book) {
+    const by = book.author ? ` by ${authorName(book.author)}` : '';
+    return {
+      text: `From “${shortTitle(book.title)}”${by}, via ${book.via}.`,
+      licence: 'Public domain',
+      licenceUrl: '',
+    };
+  }
+
+  function capitalise(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function toRecipe(index, entry) {
+    const book = index.books[entry.b];
+    return {
+      id: `book-${book.id}-${entry.k}`,
+      dedupeKey: `${book.id}|${Core.normalize(entry.name)}`,
+      sourceName: shortTitle(book.title),
+      sourceGroup: 'Classic cookbooks',
+      book: book.id,
+      k: entry.k,
+      name: entry.name,
+      image: '',
+      thumb: '',
+      area: authorName(book.author),
+      category: '',
+      tags: [],
+      source: book.link,
+      sourceLabel: 'Read the book ↗',
+      youtube: '',
+      credit: credit(book),
+      steps: [],
+      ingredients: entry.keys.map((key) => {
+        const optional = key < 0;
+        return { name: capitalise(index.words[optional ? -key - 1 : key]), measure: '', optional };
+      }),
+      complete: false,
+      completeWith: 'books',
+    };
+  }
+
+  /*
+   * Recipes that use at least one of your main ingredients and need few others. Each
+   * ingredient name in the books is checked once against everything you have, which gives
+   * every recipe a quick count of what it would need; the app then matches the shortlist
+   * properly.
+   *   mains: your main ingredients; options.pantry / options.basics: everything you have.
+   */
+  async function findRecipes(mains, { fetchImpl, pantry, basics } = {}) {
+    const index = await loadIndex(fetchImpl);
+    const all = pantry || mains;
+    const myBasics = basics || [];
+    const mainIds = new Set();
+    const covered = new Uint8Array(index.words.length);
+    index.words.forEach((w, i) => {
+      if (mains.some((m) => Core.ingredientMatches(m, w))) mainIds.add(i);
+      if (all.some((p) => Core.ingredientMatches(p, w)) || Core.coveredByBasics(myBasics, w)) covered[i] = 1;
+    });
+    const shortlist = [];
+    for (const entry of index.recipes) {
+      let usesMain = 0;
+      let missing = 0;
+      for (const key of entry.keys) {
+        if (key < 0) continue; // optional
+        if (mainIds.has(key)) usesMain++;
+        if (!covered[key]) missing++;
+      }
+      if (usesMain && missing <= MAX_MISSING) shortlist.push({ entry, missing, usesMain });
+    }
+    shortlist.sort((a, b) => a.missing - b.missing || b.usesMain - a.usesMain);
+    return shortlist.slice(0, MAX_CANDIDATES).map((s) => toRecipe(index, s.entry));
+  }
+
+  /* Adds quantities and the method when a recipe is opened. */
+  async function completeRecipe(recipe, { fetchImpl } = {}) {
+    if (recipe.complete) return recipe;
+    const details = await loadBook(recipe.book, fetchImpl);
+    const [ingredients, steps, time, serves] = details[recipe.k] || [[], [], '', ''];
+    const optional = new Set(recipe.ingredients.filter((i) => i.optional).map((i) => i.name.toLowerCase()));
+    return Object.assign({}, recipe, {
+      ingredients: ingredients.length
+        ? ingredients.map(([name, measure]) => ({ name, measure, optional: optional.has(name.toLowerCase()) || undefined }))
+        : recipe.ingredients,
+      steps,
+      category: time ? `Takes ${/\d/.test(time) ? time.charAt(0).toLowerCase() + time.slice(1) : time.toLowerCase()}` : '',
+      tags: serves ? [`Serves ${serves.replace(/^for\s+/i, '')}`] : [],
+      complete: true,
+    });
+  }
+
+  const api = { findRecipes, completeRecipe, _internal: { authorName, shortTitle, reset: () => { indexLoading = null; bookLoading.clear(); } } };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.Books = api;
+})(typeof self !== 'undefined' ? self : this);

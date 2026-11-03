@@ -1,0 +1,405 @@
+# Ingredient names the cookbook reader looks for in recipes written as paragraphs.
+# One per line, singular. Longer names win over shorter ones ("brown sugar" over "sugar").
+# Old names are included because the books are 18th to early 20th century.
+
+# meat and poultry
+beef
+steak
+rump steak
+sirloin
+brisket
+silverside
+corned beef
+minced beef
+beef mince
+gravy beef
+shin of beef
+ox tail
+oxtail
+ox tongue
+tongue
+kidney
+liver
+heart
+tripe
+sweetbread
+suet
+marrow bone
+veal
+veal cutlet
+calf's head
+calf's foot
+mutton
+lamb
+leg of lamb
+leg of mutton
+neck of mutton
+mutton chop
+lamb chop
+veal chop
+veal cutlets
+lamb cutlet
+pork
+pork chop
+pork sausage
+sausage
+bacon
+ham
+gammon
+pig's feet
+pig's head
+chicken
+fowl
+hen
+capon
+duck
+goose
+turkey
+pigeon
+rabbit
+hare
+venison
+pheasant
+partridge
+quail
+grouse
+game
+gravy
+dripping
+lard
+meat
+
+# fish and seafood
+fish
+salmon
+cod
+salt cod
+haddock
+smoked haddock
+whiting
+sole
+plaice
+turbot
+halibut
+mackerel
+herring
+kipper
+sardine
+anchovy
+tuna
+trout
+eel
+pike
+perch
+flounder
+bream
+snapper
+oyster
+mussel
+clam
+scallop
+crab
+lobster
+prawn
+shrimp
+crayfish
+
+# dairy and eggs
+egg
+egg yolk
+egg white
+milk
+skim milk
+buttermilk
+condensed milk
+evaporated milk
+cream
+sour cream
+whipped cream
+butter
+cheese
+cheddar
+parmesan
+cream cheese
+cottage cheese
+gruyere
+yogurt
+yoghurt
+curd
+
+# grains, flour, bread
+flour
+plain flour
+self-raising flour
+cornflour
+cornstarch
+cornmeal
+oatmeal
+oats
+rolled oats
+semolina
+sago
+tapioca
+arrowroot
+rice
+barley
+pearl barley
+macaroni
+vermicelli
+spaghetti
+noodle
+pasta
+bread
+breadcrumb
+crumb
+toast
+cracker
+biscuit
+sponge cake
+pastry
+puff pastry
+yeast
+baking powder
+baking soda
+bicarbonate of soda
+carbonate of soda
+cream of tartar
+
+# vegetables
+pumpkin
+squash
+butternut
+marrow
+vegetable marrow
+zucchini
+cucumber
+potato
+sweet potato
+kumara
+yam
+onion
+spring onion
+shallot
+leek
+garlic
+chive
+carrot
+parsnip
+turnip
+swede
+beetroot
+beet
+celery
+celeriac
+cabbage
+red cabbage
+cauliflower
+broccoli
+brussels sprout
+kale
+spinach
+lettuce
+endive
+watercress
+cress
+sorrel
+artichoke
+jerusalem artichoke
+asparagus
+pea
+green pea
+split pea
+bean
+broad bean
+french bean
+green bean
+haricot bean
+kidney bean
+lima bean
+lentil
+chickpea
+corn
+sweet corn
+maize
+tomato
+capsicum
+bell pepper
+green pepper
+red pepper
+chilli
+chili
+eggplant
+aubergine
+okra
+mushroom
+truffle
+radish
+horseradish
+olive
+
+# fruit
+apple
+pear
+quince
+peach
+apricot
+plum
+prune
+cherry
+grape
+raisin
+currant
+sultana
+date
+fig
+orange
+lemon
+lime
+grapefruit
+banana
+pineapple
+mango
+passionfruit
+strawberry
+raspberry
+blackberry
+gooseberry
+cranberry
+blueberry
+rhubarb
+melon
+coconut
+desiccated coconut
+candied peel
+mixed peel
+citron
+
+# nuts and seeds
+almond
+walnut
+chestnut
+hazelnut
+peanut
+pistachio
+pecan
+cashew
+pine nut
+sesame
+caraway seed
+poppy seed
+
+# herbs and spices
+parsley
+thyme
+sage
+rosemary
+mint
+basil
+bay leaf
+marjoram
+tarragon
+dill
+fennel
+coriander
+oregano
+savory
+sweet herbs
+mixed herbs
+bouquet garni
+nutmeg
+mace
+cinnamon
+clove
+allspice
+ginger
+cayenne
+paprika
+curry powder
+turmeric
+cumin
+mustard
+dry mustard
+saffron
+vanilla
+peppercorn
+
+# sweeteners, baking and pantry
+sugar
+brown sugar
+caster sugar
+icing sugar
+loaf sugar
+treacle
+golden syrup
+molasses
+honey
+maple syrup
+jam
+jelly
+marmalade
+chocolate
+cocoa
+gelatine
+isinglass
+salt
+pepper
+black pepper
+white pepper
+vinegar
+oil
+olive oil
+salad oil
+water
+stock
+chicken stock
+beef stock
+white stock
+brown stock
+broth
+wine
+white wine
+red wine
+sherry
+port wine
+brandy
+rum
+beer
+ale
+cider
+coffee
+tea
+lemon juice
+orange juice
+tomato sauce
+worcestershire sauce
+soy sauce
+ketchup
+mushroom ketchup
+walnut ketchup
+anchovy essence
+capers
+pickles
+gherkin
+mayonnaise
+
+# compounds, so the longer name wins over "corn", "salt", "water"
+corn starch
+corn flakes
+cornflakes
+corn syrup
+corn meal
+indian meal
+salt fish
+salt pork
+salt beef
+cocoanut
+desiccated cocoanut
+shredded cocoanut
+soda water
+rose water
+orange flower water
+lemon rind
+orange rind
+lemon peel
+orange peel
+lemon zest

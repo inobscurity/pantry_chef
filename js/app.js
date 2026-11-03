@@ -82,7 +82,7 @@
 
   function renderSources() {
     const on = !!state.spoonKey;
-    $('sources-summary').textContent = on ? '4 sources, including Spoonacular' : '3 free sources';
+    $('sources-summary').textContent = on ? '5 sources, including Spoonacular' : '4 free sources';
     $('spoon-key').value = '';
     $('spoon-key').placeholder = on ? 'Key saved in this browser' : 'Paste your Spoonacular API key';
     $('remove-key').hidden = !on;
@@ -171,6 +171,7 @@
       { name: 'TheMealDB', find: (p) => window.MealDB.findRecipes(p, { onProgress: setStatus }) },
       { name: 'Wikibooks Cookbook', find: (p) => window.Wikibooks.findRecipes(p) },
       { name: 'ForkRecipe', find: (p) => window.ForkRecipe.findRecipes(p) },
+      { name: 'Classic cookbooks', find: (p) => window.Books.findRecipes(p, { pantry: state.pantry, basics: state.basics }) },
     ];
     if (state.spoonKey) list.push({ name: 'Spoonacular', find: (p) => window.Spoonacular.findRecipes(p, state.spoonKey) });
     return list;
@@ -232,7 +233,7 @@
   ];
 
   function recipeCard(entry) {
-    const { recipe, need, used } = entry;
+    const { recipe, need, usedYours } = entry;
     return el('button', {
       type: 'button',
       class: 'card recipe-card',
@@ -241,7 +242,7 @@
     picture(recipe.thumb || recipe.image, '', 'thumb'),
     el('div', { class: 'body' },
       el('h3', null, recipe.name),
-      el('div', { class: 'meta' }, `Uses ${used} of yours · ${plural(recipe.ingredients.length, 'ingredient')}`),
+      el('div', { class: 'meta' }, `Uses ${usedYours} of your ${state.pantry.length} · ${plural(recipe.ingredients.length, 'ingredient')}`),
       need.length ? el('div', { class: 'buy' }, el('strong', null, 'Buy: '), listText(need)) : null,
       el('div', { class: 'source-tag' }, recipe.sourceName)));
   }
@@ -271,7 +272,12 @@
   // "Searched: TheMealDB 4 · Wikibooks Cookbook 7 · ForkRecipe 12 · Spoonacular failed"
   function searchedLine() {
     const shown = new Map();
-    for (const g of state.groups) for (const r of g.recipes) shown.set(r.recipe.sourceName, (shown.get(r.recipe.sourceName) || 0) + 1);
+    for (const g of state.groups) {
+      for (const r of g.recipes) {
+        const key = r.recipe.sourceGroup || r.recipe.sourceName;
+        shown.set(key, (shown.get(key) || 0) + 1);
+      }
+    }
     const parts = state.found.map((f) => {
       if (f.error) return el('li', { class: 'failed' }, `${f.name}: ${f.error}`);
       return el('li', null, `${f.name}: ${plural(shown.get(f.name) || 0, 'recipe')}`);
@@ -324,7 +330,9 @@
     $('recipe-view').replaceChildren(backButton(),
       el('div', { class: 'card panel loading' }, `Loading ${recipe.name}…`));
     try {
-      const full = await window.Spoonacular.completeRecipe(recipe, state.spoonKey);
+      const full = recipe.completeWith === 'books'
+        ? await window.Books.completeRecipe(recipe)
+        : await window.Spoonacular.completeRecipe(recipe, state.spoonKey);
       const i = state.recipes.findIndex((r) => r.id === id);
       if (i >= 0) state.recipes[i] = full;
       regroup(); // the full ingredient list can change which group it belongs in
@@ -381,8 +389,9 @@
     const credit = recipe.credit ? el('p', { class: 'credit' },
       recipe.credit.text + ' ',
       recipe.source ? el('a', { href: recipe.source, target: '_blank', rel: 'noopener' }, 'Original') : null,
-      ' · Licensed ',
-      el('a', { href: recipe.credit.licenceUrl, target: '_blank', rel: 'noopener' }, recipe.credit.licence),
+      recipe.credit.licenceUrl
+        ? [' · Licensed ', el('a', { href: recipe.credit.licenceUrl, target: '_blank', rel: 'noopener' }, recipe.credit.licence)]
+        : ` · ${recipe.credit.licence}`,
       recipe.sourceName === 'ForkRecipe' ? '. Not affiliated with ForkRecipe.' : '.') : null;
 
     view.replaceChildren(
@@ -400,7 +409,7 @@
             el('li', null, el('strong', null, steps.length), steps.length === 1 ? 'step' : 'steps')),
           el('div', { class: 'meta from' }, 'From ' + recipe.sourceName),
           el('div', { class: 'links' },
-            recipe.source ? el('a', { href: recipe.source, target: '_blank', rel: 'noopener' }, 'Original recipe ↗') : null,
+            recipe.source ? el('a', { href: recipe.source, target: '_blank', rel: 'noopener' }, recipe.sourceLabel || 'Original recipe ↗') : null,
             recipe.youtube ? el('a', { href: recipe.youtube, target: '_blank', rel: 'noopener' }, 'Video ↗') : null)))),
 
       el('div', { class: 'detail-grid' },

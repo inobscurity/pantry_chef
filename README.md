@@ -13,8 +13,10 @@ but it doesn't use are ignored.
 
 Your **main ingredients** drive the search: everything you list except salt, pepper, oil, water,
 sugar, flour, butter and your basics. Those still count as things you have, but a recipe has to use
-at least one main ingredient to be shown. Within a group, recipes that use more of your main
-ingredients come first, then more of everything you listed, then simpler ones.
+at least one main ingredient to be shown. Within a group, the closest matches come first: recipes that
+use more of the ingredients you listed, and between equally close ones, those using your less
+common ingredients (pumpkin before onion), then simpler ones. A recipe using just one of yours
+comes last.
 
 Pick a recipe to see:
 
@@ -40,6 +42,7 @@ app lists how many recipes each source contributed, and says if a source couldn'
 | [TheMealDB](https://www.themealdb.com) | A few hundred | None (uses the public test key, fine for personal use) | Its API terms |
 | [Wikibooks Cookbook](https://en.wikibooks.org/wiki/Cookbook:Recipes) | A few thousand, simple and classic | None | CC BY-SA 4.0 |
 | [ForkRecipe open dataset](https://github.com/futurechef/forkrecipe-recipes) | 721 dishes, bundled in the app | None | CC BY-SA 4.0 |
+| Classic cookbooks | About 69,000, from 251 books (1747 to the 1950s), bundled in the app | None | Public domain |
 | [Spoonacular](https://spoonacular.com/food-api) | Thousands, from food sites and blogs (only 67 with pumpkin, mostly desserts) | Your free API key (50 points a day) | Its API terms |
 
 - **Wikibooks Cookbook** is read through Wikimedia's official API. For each of your ingredients
@@ -49,6 +52,14 @@ app lists how many recipes each source contributed, and says if a source couldn'
 - **ForkRecipe** is a downloaded copy in `data/forkrecipe.json` (see `data/README.md`): stocks,
   condiments, drinks and forks are left out. About half its recipes give quantities as proportions
   rather than amounts; the recipe screen says so.
+- **Classic cookbooks** are out-of-copyright books from [Project Gutenberg](https://www.gutenberg.org),
+  plus Hannah Glasse's *The Art of Cookery Made Plain and Easy* (1747) from the
+  [Internet Archive](https://archive.org/details/TheArtOfCookery). `scripts/build_books.py` reads
+  each book once and keeps only its recipes (see `data/books/README.md`); the books themselves
+  aren't stored. Old recipes use old measures ("a gill", "butter the size of an egg") and are
+  shown as written. Where a book gives no ingredient list, the ingredients are picked out of the
+  method by name, so those recipes show no separate quantities. Scanned books such as Glasse's
+  are corrected for the old long s ("falt" → salt) and only clearly readable recipes are kept.
 - **Spoonacular**: add your key under **Recipe sources**. It's saved only in that browser, never in
   this repository. Each search costs about 2 of your daily points and opening one of its
   recipes about 1 more. If the key is rejected or the allowance is used up, the other sources
@@ -72,8 +83,9 @@ It's a static site with no build step and no server.
 | `js/core.js` | Matching ingredients, basics, optional items, grouping, step splitting. |
 | `js/mealdb.js`, `js/wikibooks.js`, `js/forkrecipe.js`, `js/spoonacular.js` | One file per recipe source. |
 | `js/app.js` | The two screens: search with grouped results, and the recipe. |
-| `data/` | The bundled ForkRecipe data and its licence. |
-| `scripts/` | Rebuilds the ForkRecipe data from the dataset, reading its files without running them. |
+| `data/` | The bundled ForkRecipe data and its licence, and `data/books/` (classic cookbooks). |
+| `js/books.js` | Searches the classic cookbooks on the device; loads a book's methods when a recipe is opened. |
+| `scripts/` | Rebuild the bundled data: `build_forkrecipe.py`, and `build_books.py` with `fix_long_s.py` and `ingredients.txt` for the cookbooks. |
 | `test/` | Tests, with the online services faked: `node --test test/*.test.js` |
 
 ## Ideas for later

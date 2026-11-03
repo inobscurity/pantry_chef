@@ -47,11 +47,14 @@
           <button type="button" id="clear" class="btn link" hidden>Clear all</button>
         </div>
         <details class="keybox">
-          <summary>Recipe sources: <span id="sources-summary">3 free sources</span></summary>
+          <summary>Recipe sources: <span id="sources-summary">4 free sources</span></summary>
           <p>Always searched, free:
             <a href="https://www.themealdb.com" target="_blank" rel="noopener">TheMealDB</a>,
             the <a href="https://en.wikibooks.org/wiki/Cookbook:Recipes" target="_blank" rel="noopener">Wikibooks Cookbook</a>
-            and the <a href="https://github.com/futurechef/forkrecipe-recipes" target="_blank" rel="noopener">ForkRecipe open dataset</a>.
+            the <a href="https://github.com/futurechef/forkrecipe-recipes" target="_blank" rel="noopener">ForkRecipe open dataset</a>,
+            and about 70,000 recipes from 252 classic cookbooks that are out of copyright, from
+            <a href="https://www.gutenberg.org" target="_blank" rel="noopener">Project Gutenberg</a> and the
+            <a href="https://archive.org" target="_blank" rel="noopener">Internet Archive</a>.
             Add a free <a href="https://spoonacular.com/food-api/console" target="_blank" rel="noopener">Spoonacular API key</a>
             to also search recipes collected from food websites and blogs.</p>
           <label for="spoon-key" class="label">Spoonacular API key</label>
@@ -80,8 +83,10 @@
   <footer class="wrap foot">
     Recipes from <a href="https://www.themealdb.com" target="_blank" rel="noopener">TheMealDB</a>,
     the <a href="https://en.wikibooks.org/wiki/Cookbook:Recipes" target="_blank" rel="noopener">Wikibooks Cookbook</a> (CC BY-SA 4.0),
-    the <a href="https://github.com/futurechef/forkrecipe-recipes" target="_blank" rel="noopener">ForkRecipe dataset</a> by FoodML and contributors (CC BY-SA 4.0)
-    and <a href="https://spoonacular.com/food-api" target="_blank" rel="noopener">spoonacular</a>.
+    the <a href="https://github.com/futurechef/forkrecipe-recipes" target="_blank" rel="noopener">ForkRecipe dataset</a> by FoodML and contributors (CC BY-SA 4.0),
+    <a href="https://spoonacular.com/food-api" target="_blank" rel="noopener">spoonacular</a>,
+    and public-domain cookbooks via <a href="https://www.gutenberg.org" target="_blank" rel="noopener">Project Gutenberg</a>
+    and the <a href="https://archive.org" target="_blank" rel="noopener">Internet Archive</a>.
   </footer>
 
   <script src="js/core.js"></script>
@@ -89,6 +94,7 @@
   <script src="js/spoonacular.js"></script>
   <script src="js/wikibooks.js"></script>
   <script src="js/forkrecipe.js"></script>
+  <script src="js/books.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
