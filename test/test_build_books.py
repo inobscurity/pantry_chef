@@ -47,6 +47,11 @@ class Squash(unittest.TestCase):
         self.assertEqual(B.match_name('Summer squash'), 'summer squash')
         self.assertEqual(B.match_name('Spaghetti squash'), 'spaghetti squash')
 
+    def test_plain_squash_in_a_summer_squash_dish_stays_squash(self):
+        self.assertEqual(B.match_name('Squash', '2', 'Summer Squash Bujea'), 'squash')
+        self.assertEqual(B.match_name('Squash, sliced', '', 'Fried Scalloped Squash'), 'squash')
+        self.assertEqual(B.match_name('Squash', '', 'Squash Pie'), 'pumpkin')
+
 
 class Peppers(unittest.TestCase):
     def test_red_pepper_is_capsicum_only_when_its_the_vegetable(self):

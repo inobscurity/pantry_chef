@@ -422,15 +422,19 @@ def pepper_as_capsicum(name, measure=''):
     return COLOUR_PEPPER.sub('capsicum', name) if veg else name
 
 
-def match_name(name, measure=''):
+SUMMER_SQUASH_DISH = re.compile(r'(?i)\b(?:summer|yellow|button|scallop(?:ed|ini)?|crookneck|patty ?pans?|cymling)\b')
+
+
+def match_name(name, measure='', recipe_name=''):
     """What an ingredient is, for searching: "Squash, steamed and strained" → "squash"."""
     n = re.sub(r'\([^)]*\)', ' ', pepper_as_capsicum(name, measure))
     n = re.split(r',|;|\s[—–]\s', n)[0]
     n = re.sub(r'\s+', ' ', n).strip().lower() or name.lower()
     # Old American books mean a winter squash by plain "squash": in Australian terms, pumpkin.
-    # Summer, yellow, pattypan, scallop, button, crookneck and spaghetti squash keep their names.
+    # Summer, yellow, pattypan, scallop, button, crookneck and spaghetti squash keep their names,
+    # and so does a plain "squash" in a summer squash dish ("Summer Squash Bujea").
     if re.fullmatch(r'(?:(?:fresh|young|ripe|winter|cooked|stewed|boiled|mashed|strained|sifted|steamed|baked|dry|nice|good|large|small)\s+)*squash(?:es)?', n):
-        return 'pumpkin'
+        return 'squash' if SUMMER_SQUASH_DISH.search(recipe_name) else 'pumpkin'
     return n
 
 
@@ -508,7 +512,7 @@ def main(argv):
             # are in the book's own file, loaded when a recipe is opened.
             keys = []
             for name, measure in r['i']:
-                k = word_id(match_name(name, measure))
+                k = word_id(match_name(name, measure, r['n']))
                 keys.append(-k - 1 if OPTIONAL.search(name + ' ' + measure) else k)
             index.append([r['n'], keys])
             details.append([r['i'], r['steps'], r.get('t', ''), r.get('s', '')])
