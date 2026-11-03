@@ -245,3 +245,17 @@ test('tomato sauce in your list counts as ketchup, the Australian way', () => {
   // Only your list is read the Australian way: ketchup in your list isn't a recipe's tomato sauce.
   assert.ok(!Core.ingredientMatches('ketchup', 'Tomato sauce'));
 });
+
+test('shallot in your list counts as spring onion, the Australian way', () => {
+  for (const b of ['Spring onions', 'Scallions', 'Green onions, sliced', 'Shallots, finely chopped']) {
+    assert.ok(Core.ingredientMatches('shallots', b), `shallots should cover ${b}`);
+    assert.ok(Core.coveredByBasics(['shallot'], b), `shallot as a basic should cover ${b}`);
+  }
+  assert.ok(!Core.ingredientMatches('shallots', 'Onion'));
+  assert.ok(!Core.ingredientMatches('spring onion', 'Shallots')); // only your list is read this way
+  // Spring onions and onions are different ingredients
+  assert.ok(!Core.ingredientMatches('spring onion', 'Onion'));
+  assert.ok(!Core.ingredientMatches('onion', 'Spring onions'));
+  assert.ok(Core.ingredientMatches('onion', 'Brown onion'));
+  assert.ok(Core.coveredByBasics(Core.DEFAULT_BASICS, 'Spring water'));
+});

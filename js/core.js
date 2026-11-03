@@ -27,7 +27,7 @@
     'plain', 'all', 'purpose', 'self', 'raising', 'rising', 'unsalted', 'salted', 'extra',
     'virgin', 'olive', 'vegetable', 'sunflower', 'canola', 'rapeseed', 'neutral', 'cooking',
     'light', 'mild', 'caster', 'granulated', 'cold', 'boiling', 'warm', 'lukewarm', 'iced',
-    'tap', 'filtered', 'spray', 'free', 'range', 'clove', 'peppercorn', 'leaf',
+    'tap', 'filtered', 'spray', 'free', 'range', 'clove', 'peppercorn', 'leaf', 'spring', 'mineral',
     // cream, milk and sugar
     'heavy', 'double', 'single', 'thickened', 'pouring', 'whipping', 'full', 'fat', 'skim',
     'skimmed', 'low', 'reduced',
@@ -92,7 +92,7 @@
     'stock', 'broth', 'powder', 'sauce', 'paste', 'extract', 'essence', 'oil',
     'vinegar', 'flour', 'milk', 'cream', 'butter', 'syrup', 'ketchup', 'jam',
     'seed', 'pepita', 'spice', 'flake', 'pie', 'sour', 'coconut', 'almond', 'oat',
-    'soy', 'condensed', 'evaporated', 'powdered', 'icing', 'liqueur', 'wine',
+    'soy', 'condensed', 'evaporated', 'powdered', 'icing', 'liqueur', 'wine', 'spring',
   ]);
 
   const IRREGULAR = { leaves: 'leaf', loaves: 'loaf', halves: 'half', calves: 'calf', knives: 'knife', sheaves: 'sheaf' };
@@ -194,9 +194,10 @@
   // Does something you have (`have`) cover a recipe ingredient (`needed`)?
   const matchCache = new Map();
   // What something in YOUR list also covers, in the Australian sense: bottled "tomato sauce"
-  // is ketchup. Only your list is read this way; a recipe's "tomato sauce" stays a cooked sauce,
-  // and an old book's mushroom or walnut ketchup isn't tomato.
-  const YOURS_ALSO = { 'tomato sauce': ['tomato ketchup'] };
+  // is ketchup, and "shallots" are spring onions. Only your list is read this way; a recipe's
+  // "tomato sauce" stays a cooked sauce, an old book's mushroom or walnut ketchup isn't tomato,
+  // and a recipe's shallot is still a shallot.
+  const YOURS_ALSO = { 'tomato sauce': ['tomato ketchup'], shallot: ['spring onion'] };
 
   function ingredientMatches(have, needed) {
     const key = have + '\u0000' + needed;
