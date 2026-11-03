@@ -254,7 +254,7 @@ def finish(recipe):
         return None
     if NOT_FOOD.search(recipe['name']):
         return None
-    if re.match(r"(?i)^(?:from|by|contributed|mrs\.?|miss|mr\.?)\s|^\d", recipe['name']):
+    if re.match(r"(?i)^(?:from|by|contributed|mrs\.?|miss|mr\.?)\s|^\d|^quantit|^(?:for|enough for|serves)\s+\w+\s+persons", recipe['name']):
         return None                                                       # a contributor's name
     if re.search(r"\b(?:co\.|company|ltd|inc|st\.,|street|mass\.?$|lea & perrins|improved with)", recipe['name'], re.I):
         return None                                                       # adverts in magazine issues

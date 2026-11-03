@@ -67,7 +67,9 @@
     'soy', 'condensed', 'evaporated', 'powdered', 'icing', 'liqueur', 'wine',
   ]);
 
+  const IRREGULAR = { leaves: 'leaf', loaves: 'loaf', halves: 'half', calves: 'calf', knives: 'knife', sheaves: 'sheaf' };
   function singular(word) {
+    if (IRREGULAR[word]) return IRREGULAR[word];
     if (word.length > 4 && word.endsWith('ies')) return word.slice(0, -3) + 'y'; // berries
     if (word.length > 4 && /(oes|ches|shes|sses|xes)$/.test(word)) return word.slice(0, -2); // tomatoes
     if (word.length > 3 && word.endsWith('s') && !word.endsWith('ss')) return word.slice(0, -1); // eggs
@@ -140,12 +142,24 @@
   // "chicken" matches "chicken breast" and "chicken breast" matches "chicken":
   // one name's words all appear in the other, and the extra words don't make it a
   // different product.
+  // Leaves, flowers and shoots are a different ingredient from the plant's usual part:
+  // pumpkin leaves aren't pumpkin, zucchini flowers aren't zucchini. Except for plants whose
+  // leaves are what you'd normally buy: basil leaves are basil.
+  const PLANT_PARTS = new Set(['leaf', 'flower', 'blossom', 'shoot', 'tendril', 'vine']);
+  const LEAFY = new Set([
+    'basil', 'mint', 'parsley', 'coriander', 'sage', 'thyme', 'bay', 'curry', 'oregano', 'tarragon',
+    'dill', 'rosemary', 'marjoram', 'sorrel', 'chive', 'lettuce', 'spinach', 'cabbage', 'kale',
+    'celery', 'rocket', 'watercress', 'cress', 'chard', 'silverbeet', 'lemongrass', 'fenugreek',
+    'lovage', 'chervil', 'savory', 'kaffir', 'makrut', 'pandan', 'shiso', 'herb', 'salad',
+  ]);
+
   function namesMatch(a, b) {
     const x = tokens(a);
     const y = tokens(b);
     if (!x.length || !y.length) return false;
+    const changes = (w, shared) => DERIVED.has(w) || (PLANT_PARTS.has(w) && !shared.some((s) => LEAFY.has(s)));
     const within = (p, q) =>
-      p.every((w) => q.includes(w)) && !q.some((w) => !p.includes(w) && DERIVED.has(w));
+      p.every((w) => q.includes(w)) && !q.some((w) => !p.includes(w) && changes(w, p));
     return within(x, y) || within(y, x);
   }
 

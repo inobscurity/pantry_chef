@@ -197,3 +197,14 @@ test('a recipe must use at least half of the ingredients you listed, not countin
   const names = Core.groupRecipes(recipes, pantry, Core.DEFAULT_BASICS, 3).flatMap((g) => g.recipes.map((r) => r.recipe.name));
   assert.deepEqual(names, ['Three of yours']);
 });
+
+test('leaves and flowers are a different ingredient, except for herbs and leafy greens', () => {
+  for (const [a, b] of [['pumpkin', 'Pumpkin leaves'], ['pumpkin', 'Cassava leaves or pumpkin leaves'],
+    ['zucchini', 'Zucchini flowers'], ['pumpkin', 'Pumpkin flowers'], ['grape', 'Vine leaves']]) {
+    assert.ok(!Core.ingredientMatches(a, b), `${a} should not cover ${b}`);
+  }
+  for (const [a, b] of [['basil', 'Basil leaves'], ['mint', 'Fresh mint leaves'], ['bay leaf', 'Bay leaves'],
+    ['spinach', 'Spinach leaves'], ['parsley', 'Parsley leaves'], ['pumpkin leaves', 'Pumpkin leaves'], ['pumpkin', 'Pumpkin']]) {
+    assert.ok(Core.ingredientMatches(a, b), `${a} should cover ${b}`);
+  }
+});

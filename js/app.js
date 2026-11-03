@@ -330,8 +330,9 @@
     top.push(searchedLine());
     if (state.main) {
       top.push(el('div', { class: 'card notice stale' },
-        el('strong', null, `★ ${state.main}`), ': only recipes using it are shown. ',
-        el('button', { type: 'button', class: 'btn link inline', onclick: () => toggleMain(state.main) }, 'Show all')));
+        el('div', null,
+          el('strong', null, `★ ${state.main}`), ': only recipes using it are shown. ',
+          el('button', { type: 'button', class: 'btn link inline', onclick: () => toggleMain(state.main) }, 'Show all'))));
     }
 
     const total = state.groups.reduce((n, g) => n + g.recipes.length, 0);
