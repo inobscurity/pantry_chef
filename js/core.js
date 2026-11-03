@@ -44,7 +44,9 @@
     [/\bbutternut squash(?:es)?\b/g, 'butternut pumpkin'],
     [/\b(?:kabocha|winter|japanese|jap) squash(?:es)?\b/g, 'pumpkin'],
     [/\bsweet potato(?:e?s)?\b/g, 'kumara'],
-    [/\bcapsicums?\b/g, 'bell pepper'],
+    // Capsicums of any colour, also called bell peppers. Kept as "capsicum" so it never
+    // matches plain "pepper", the spice.
+    [/\b(?:(?:red|green|yellow|orange|purple)\s+)?(?:capsicums?|bell peppers?)\b/g, 'capsicum'],
     [/\b(?:aubergines?|brinjals?)\b/g, 'eggplant'],
     [/\bcourgettes?\b/g, 'zucchini'],
     [/\bcilantro\b/g, 'coriander'],
@@ -229,6 +231,31 @@
       alt.split(/\s+(?:and|&)\s+/i).every((part) => basics.some((b) => covers(b, part))));
   }
 
+  // "Red pepper" is a capsicum in modern British and American recipes, but cayenne in old ones
+  // ("a few grains of red pepper") and chilli flakes in "crushed red pepper". It counts as a
+  // capsicum only when it's clearly the vegetable: counted ("2 red peppers") or prepared
+  // ("sliced", "stuffed"). Green, yellow and orange peppers are the vegetable unless there's a
+  // spice clue; a plain "red pepper" is the spice.
+  const COLOUR_PEPPER = /\b(red|green|yellow|orange|sweet)\s+peppers?\b(?!\s*(?:flakes?|corns?|sauce|paste|powder))/i;
+  const SPICE_CLUE = /\b(?:cayenne|flakes?|crushed|ground|powder(?:ed)?|dried|grains?|dash|pinch|sprinkl\w*|to taste|a little|saltspoon\w*|teaspoon\w*|tea-spoon\w*|tsp|tablespoon\w*|table-spoon\w*|tbsp|dessert-?spoon\w*|spoonful\w*)\b/i;
+  const VEG_CLUE = /\b(?:sliced|chopped|diced|stuffed|roasted|seeded|deseeded|halved|quartered|strips?|rings?|cut|large|medium|small|whole|fresh|cored)\b/i;
+  const COUNT = /^\s*(?:\d+(?:[.\/]\d+)?|[½¼¾]|a|an|one|two|three|four|five|six|half)\s*(?:large|medium|small|whole)?\s*$/i;
+
+  const nameOfNow = remember((key) => {
+    const [name, measure] = key.split('\u0000');
+    const m = name.match(COLOUR_PEPPER);
+    if (!m) return name;
+    const text = `${name} ${measure}`;
+    const veg = !SPICE_CLUE.test(text)
+      && (COUNT.test(measure) || VEG_CLUE.test(name) || /^(green|yellow|orange|sweet)$/i.test(m[1]));
+    return veg ? name.replace(COLOUR_PEPPER, 'capsicum') : name;
+  }, 50000);
+
+  // The name a recipe ingredient is matched by.
+  function nameOf(ing) {
+    return nameOfNow(`${ing.name || ''}\u0000${ing.measure || ''}`);
+  }
+
   const OPTIONAL = /\boptional\b|\bto serve\b|\bfor serving\b|\bto garnish\b|\bfor garnish\b|\bgarnish\b/i;
   function isOptional(ing) {
     return ing.optional === true || OPTIONAL.test(ing.name || '') || OPTIONAL.test(ing.measure || '');
@@ -252,7 +279,7 @@
 
   function rest(ing, basics) {
     if (isOptional(ing)) return 'optional';
-    if (basics && coveredByBasics(basics, ing.name)) return 'staple';
+    if (basics && coveredByBasics(basics, nameOf(ing))) return 'staple';
     return 'need';
   }
 
@@ -260,14 +287,14 @@
   function statusOf(ing, pantry, basics) {
     // Parts that only describe ("nonfat and low-sodium broth", "peeled and cubed") are ignored.
     const describes = (part) => normalize(part).split(' ').every((w) => !w || NOISE.has(w) || BASIC_MODIFIERS.has(w));
-    const parts = shortName(ing.name).split(/\s+(?:and|&)\s+/i).filter((p) => p && !describes(p));
+    const parts = shortName(nameOf(ing)).split(/\s+(?:and|&)\s+/i).filter((p) => p && !describes(p));
     if (parts.length > 1) {
       const has = parts.map((part) => pantry.some((p) => ingredientMatches(p, part)));
       const covered = parts.every((part, i) => has[i] || coveredByBasics(basics, part));
       if (covered) return has.some(Boolean) ? 'have' : 'staple';
       return isOptional(ing) ? 'optional' : 'need';
     }
-    if (pantry.some((p) => ingredientMatches(p, ing.name))) return 'have';
+    if (pantry.some((p) => ingredientMatches(p, nameOf(ing)))) return 'have';
     return rest(ing, basics);
   }
 
@@ -336,25 +363,25 @@
       const need = items.filter((i) => i.status === 'need');
       const used = items.filter((i) => i.status === 'have').length;
       if (need.length > limit) continue;
-      if (main && !recipe.ingredients.some((i) => ingredientMatches(main, i.name))) continue;
-      const counted = items.filter((i) => i.status !== 'optional' && i.status !== 'staple' && !coveredByBasics(myBasics, i.name));
+      if (main && !recipe.ingredients.some((i) => ingredientMatches(main, nameOf(i)))) continue;
+      const counted = items.filter((i) => i.status !== 'optional' && i.status !== 'staple' && !coveredByBasics(myBasics, nameOf(i)));
       const fromYours = counted.filter((i) => i.status === 'have').length;
       if (counted.length > 2 * fromYours) continue;
-      const usesListed = listed.filter((p) => recipe.ingredients.some((i) => ingredientMatches(p, i.name))).length;
+      const usesListed = listed.filter((p) => recipe.ingredients.some((i) => ingredientMatches(p, nameOf(i)))).length;
       if (usesListed * 2 < listed.length) continue;
-      const usedMain = mains.filter((m) => recipe.ingredients.some((i) => ingredientMatches(m, i.name))).length;
+      const usedMain = mains.filter((m) => recipe.ingredients.some((i) => ingredientMatches(m, nameOf(i)))).length;
       if (usedMain === 0) continue;
-      const usedYours = pantry.filter((p) => recipe.ingredients.some((i) => ingredientMatches(p, i.name))).length;
+      const usedYours = pantry.filter((p) => recipe.ingredients.some((i) => ingredientMatches(p, nameOf(i)))).length;
       groups[need.length].recipes.push({ recipe, items, need, used, usedMain, usedYours });
     }
     // Between equally close recipes, ones using your less common ingredients come first:
     // for pumpkin and onion, a pumpkin dish before one more onion dish.
     const uses = new Map(pantry.map((p) => [p, 0]));
-    for (const g of groups) for (const e of g.recipes) for (const p of pantry) if (e.recipe.ingredients.some((i) => ingredientMatches(p, i.name))) uses.set(p, uses.get(p) + 1);
+    for (const g of groups) for (const e of g.recipes) for (const p of pantry) if (e.recipe.ingredients.some((i) => ingredientMatches(p, nameOf(i)))) uses.set(p, uses.get(p) + 1);
     const total = groups.reduce((n, g) => n + g.recipes.length, 0) + 1;
     for (const g of groups) {
       for (const e of g.recipes) {
-        e.rarity = pantry.reduce((sum, p) => sum + (e.recipe.ingredients.some((i) => ingredientMatches(p, i.name)) ? Math.log(total / (1 + uses.get(p))) : 0), 0);
+        e.rarity = pantry.reduce((sum, p) => sum + (e.recipe.ingredients.some((i) => ingredientMatches(p, nameOf(i))) ? Math.log(total / (1 + uses.get(p))) : 0), 0);
       }
       g.recipes.sort((x, y) => y.usedYours - x.usedYours
         || y.rarity - x.rarity
@@ -402,7 +429,7 @@
   }
 
   const api = {
-    DEFAULT_BASICS, normalize, tokens, alternatives, ingredientMatches, basicMatches, coveredByBasics, isOptional, shortName, mainIngredients,
+    DEFAULT_BASICS, normalize, tokens, alternatives, ingredientMatches, basicMatches, coveredByBasics, isOptional, shortName, mainIngredients, nameOf,
     classifyIngredients, groupRecipes, splitSteps, dedupe,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

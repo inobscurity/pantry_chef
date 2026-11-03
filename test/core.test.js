@@ -259,3 +259,33 @@ test('shallot in your list counts as spring onion, the Australian way', () => {
   assert.ok(Core.ingredientMatches('onion', 'Brown onion'));
   assert.ok(Core.coveredByBasics(Core.DEFAULT_BASICS, 'Spring water'));
 });
+
+test('capsicums of every colour are one ingredient, and "red pepper" is one when it\'s the vegetable', () => {
+  const have = (pantry, name, measure) => Core.classifyIngredients({ ingredients: [{ name, measure: measure || '' }] }, pantry, []).map((i) => i.status)[0] === 'have';
+  // colours
+  for (const n of ['Red capsicum', 'Green capsicums', 'Yellow bell pepper', 'Orange bell peppers', 'Capsicum']) {
+    assert.ok(have(['red capsicum'], n), `red capsicum should cover ${n}`);
+    assert.ok(have(['capsicum'], n), `capsicum should cover ${n}`);
+  }
+  // the vegetable
+  assert.ok(have(['capsicum'], 'Red peppers', '2'));
+  assert.ok(have(['capsicum'], 'Red pepper, seeded and sliced'));
+  assert.ok(have(['capsicum'], 'Green peppers'));
+  assert.ok(have(['capsicum'], 'Stuffed green peppers'));
+  assert.ok(have(['capsicum'], 'Sweet pepper', '1 large'));
+  // the spice
+  assert.ok(!have(['capsicum'], 'Red pepper', '1/4 teaspoon'));
+  assert.ok(!have(['capsicum'], 'Red pepper', 'few grains'));
+  assert.ok(!have(['capsicum'], 'Red pepper'));
+  assert.ok(!have(['capsicum'], 'Crushed red pepper'));
+  assert.ok(!have(['capsicum'], 'Red pepper flakes'));
+  assert.ok(!have(['capsicum'], 'Cayenne pepper'));
+  assert.ok(!have(['capsicum'], 'Green peppercorns'));
+  // and the spice still counts as the spice
+  assert.ok(have(['cayenne'], 'Cayenne pepper'));
+  // capsicum is never black pepper, either way round
+  assert.ok(!have(['capsicum'], 'Pepper'));
+  assert.ok(!have(['red capsicum'], 'Black pepper'));
+  assert.ok(!have(['pepper'], 'Red capsicum'));
+  assert.ok(!have(['pepper'], 'Bell pepper'));
+});

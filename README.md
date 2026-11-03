@@ -49,6 +49,12 @@ as spring onion. Only your list and basics are read this way: a recipe's "tomato
 a cooked sauce, its shallots are still shallots, and old books' mushroom or walnut ketchup isn't
 covered. Spring onions and onions are kept apart.
 
+**Capsicums** of every colour count as one ingredient, also called bell peppers. A recipe's "red
+pepper" counts as a capsicum only when it's clearly the vegetable: counted ("2 red peppers") or
+prepared ("sliced", "stuffed"). Measured by the spoon or pinch, or written as cayenne, crushed or
+flakes, it's the spice, as it usually is in old cookbooks. A plain "red pepper" is the spice; a
+plain "green pepper" is the vegetable. Capsicum never matches black pepper.
+
 **Optional ingredients** (marked optional, or "to serve" / "to garnish") never count as "to buy".
 
 ## Recipe sources

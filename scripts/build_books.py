@@ -402,9 +402,29 @@ def read_book(text):
 OPTIONAL = re.compile(r'(?i)\boptional\b|\bif liked\b|\bto serve\b|\bfor serving\b|\bto garnish\b|\bfor garnish\b')
 
 
-def match_name(name):
+# Same rule as nameOf() in js/core.js: "red pepper" is a capsicum only when it's clearly the
+# vegetable (counted or prepared); otherwise, in these books, it's cayenne.
+COLOUR_PEPPER = re.compile(r'\b(red|green|yellow|orange|sweet)\s+peppers?\b(?!\s*(?:flakes?|corns?|sauce|paste|powder))', re.I)
+SPICE_CLUE = re.compile(r'\b(?:cayenne|flakes?|crushed|ground|powder(?:ed)?|dried|grains?|dash|pinch|sprinkl\w*|to taste|'
+                        r'a little|saltspoon\w*|teaspoon\w*|tea-spoon\w*|tsp|tablespoon\w*|table-spoon\w*|tbsp|'
+                        r'dessert-?spoon\w*|spoonful\w*)\b', re.I)
+VEG_CLUE = re.compile(r'\b(?:sliced|chopped|diced|stuffed|roasted|seeded|deseeded|halved|quartered|strips?|rings?|cut|'
+                      r'large|medium|small|whole|fresh|cored)\b', re.I)
+COUNT = re.compile(r'^\s*(?:\d+(?:[./]\d+)?|[½¼¾]|a|an|one|two|three|four|five|six|half)\s*(?:large|medium|small|whole)?\s*$', re.I)
+
+
+def pepper_as_capsicum(name, measure=''):
+    m = COLOUR_PEPPER.search(name)
+    if not m:
+        return name
+    veg = (not SPICE_CLUE.search(f'{name} {measure}')
+           and (COUNT.match(measure or '') or VEG_CLUE.search(name) or m.group(1).lower() in ('green', 'yellow', 'orange', 'sweet')))
+    return COLOUR_PEPPER.sub('capsicum', name) if veg else name
+
+
+def match_name(name, measure=''):
     """What an ingredient is, for searching: "Squash, steamed and strained" → "squash"."""
-    n = re.sub(r'\([^)]*\)', ' ', name)
+    n = re.sub(r'\([^)]*\)', ' ', pepper_as_capsicum(name, measure))
     n = re.split(r',|;|\s[—–]\s', n)[0]
     return re.sub(r'\s+', ' ', n).strip().lower() or name.lower()
 
@@ -483,7 +503,7 @@ def main(argv):
             # are in the book's own file, loaded when a recipe is opened.
             keys = []
             for name, measure in r['i']:
-                k = word_id(match_name(name))
+                k = word_id(match_name(name, measure))
                 keys.append(-k - 1 if OPTIONAL.search(name + ' ' + measure) else k)
             index.append([r['n'], keys])
             details.append([r['i'], r['steps'], r.get('t', ''), r.get('s', '')])

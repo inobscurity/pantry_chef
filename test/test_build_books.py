@@ -40,5 +40,14 @@ class ReadBook(unittest.TestCase):
         self.assertEqual(r['t'], 'One Hour')
 
 
+class Peppers(unittest.TestCase):
+    def test_red_pepper_is_capsicum_only_when_its_the_vegetable(self):
+        self.assertEqual(B.match_name('Red peppers, sliced', '2'), 'capsicum')
+        self.assertEqual(B.match_name('Green peppers', ''), 'capsicum')
+        self.assertEqual(B.match_name('Red pepper', '1/4 teaspoon'), 'red pepper')
+        self.assertEqual(B.match_name('Red pepper', ''), 'red pepper')
+        self.assertEqual(B.match_name('Crushed red pepper', '1 tsp'), 'crushed red pepper')
+
+
 if __name__ == '__main__':
     unittest.main()
