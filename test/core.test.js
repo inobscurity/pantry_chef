@@ -325,3 +325,45 @@ test('kinds of pumpkin are pumpkin, and squash is the Australian pattypan kind',
   assert.ok(!Core.ingredientMatches('squash', 'Zucchini'));
   assert.ok(!Core.ingredientMatches('pumpkin', 'Spaghetti squash'));
 });
+
+test('a purée of meat or fish isn\'t the meat or fish, but a vegetable purée is the vegetable', () => {
+  for (const [a, b] of [['chicken', 'Chicken purée'], ['ham', 'Purée of ham'], ['beef', 'Beef puree'], ['salmon', 'Salmon purée'], ['pork', 'Pork purée']]) {
+    assert.ok(!Core.ingredientMatches(a, b), `${a} should not cover ${b}`);
+  }
+  for (const [a, b] of [['pumpkin', 'Pumpkin purée'], ['peas', 'Pea puree'], ['apple', 'Apple purée'], ['chicken', 'Chicken breasts']]) {
+    assert.ok(Core.ingredientMatches(a, b), `${a} should cover ${b}`);
+  }
+});
+
+test('recipes are sorted into mains, sides, soups, starters, sauces, desserts and other', () => {
+  const course = (name, ingredients, hint) => Core.courseOf({ name, courseHint: hint, ingredients: (ingredients || []).map((n) => ({ name: n })) });
+  const expect = {
+    main: [['Roast Chicken', ['Chicken', 'Butter']], ['Grilled Snapper', ['Snapper', 'Lemon']], ['Beef Stroganoff', ['Beef', 'Cream', 'Mushrooms']],
+      ['Steak and Kidney Pudding', ['Steak', 'Kidney', 'Flour', 'Suet']], ['Chicken Pie', ['Chicken', 'Pastry']], ['Vegetable Curry', ['Potatoes', 'Peas', 'Curry powder'], 'side'],
+      ['Cheese Omelette', ['Eggs', 'Cheese']], ['Lentil Loaf', ['Lentils', 'Onion', 'Breadcrumbs']], ['Chicken Salad', ['Chicken', 'Lettuce']],
+      ['Prawn Linguine', ['Prawns', 'Pasta', 'Garlic']], ['Mussels Marinière', ['Mussels', 'Wine']], ['Sausage Rolls', ['Sausage meat', 'Pastry']]],
+    side: [['Mashed Potatoes', ['Potatoes', 'Butter', 'Milk']], ['Stewed Onions', ['Onions', 'Butter']], ['Green Salad', ['Lettuce', 'Cucumber']],
+      ['Boiled Rice', ['Rice', 'Water']], ['Glazed Carrots', ['Carrots', 'Butter', 'Sugar']], ['Fried Squash', ['Squash', 'Butter'], 'side']],
+    soup: [['Pumpkin Soup', ['Pumpkin', 'Onion', 'Stock']], ['Clam Chowder', ['Clams', 'Potatoes']], ['Consommé Massena', ['Stock']], ['Mulligatawney', ['Chicken', 'Curry powder']]],
+    starter: [['Canapés of Anchovy', ['Anchovies', 'Toast']], ['Chicken Liver Pâté', ['Chicken livers', 'Butter']], ['Devilled Eggs', ['Eggs', 'Mustard']]],
+    sauce: [['Béchamel Sauce', ['Milk', 'Butter', 'Flour']], ['Brown Gravy', ['Stock']], ['Sage and Onion Stuffing', ['Sage', 'Onion', 'Bread']],
+      ['Anchovy Butter', ['Butter', 'Anchovies']], ['White Stock', ['Veal', 'Water']], ['French Dressing', ['Oil', 'Vinegar']], ['Bread Sauce', ['Bread', 'Milk']]],
+    dessert: [['Apple Pie', ['Apples', 'Pastry', 'Sugar']], ['Pumpkin Pie', ['Pumpkin', 'Eggs', 'Sugar']], ['Bread and Butter Pudding', ['Bread', 'Butter', 'Milk']],
+      ['Sponge Cake', ['Flour', 'Eggs', 'Sugar']], ['Vanilla Ice Cream', ['Cream', 'Sugar']], ['Corn Bread', ['Cornmeal', 'Milk']], ['Lemon Tart', ['Lemons', 'Pastry']]],
+    other: [['To Pickle Walnuts', ['Walnuts', 'Vinegar']], ['Raspberry Cordial', ['Raspberries', 'Sugar']], ['Beef Tea', ['Beef', 'Water']]],
+  };
+  for (const [want, cases] of Object.entries(expect)) {
+    for (const [name, ings, hint] of cases) assert.equal(course(name, ings, hint), want, name);
+  }
+});
+
+test('a chapter is only a clue: names and ingredients come first', () => {
+  const course = (name, ingredients, hint) => Core.courseOf({ name, courseHint: hint, ingredients: ingredients.map((n) => ({ name: n })) });
+  assert.equal(course('Ham Omelette', ['Eggs', 'Ham'], 'dessert'), 'main');
+  assert.equal(course('Creamed Chicken', ['Chicken', 'Cream'], 'dessert'), 'main');
+  assert.equal(course('Onion Tart', ['Onions', 'Pastry', 'Eggs'], ''), 'main');
+  assert.equal(course('Cheese Pudding', ['Cheese', 'Bread', 'Milk', 'Eggs'], 'dessert'), 'main');
+  assert.equal(course('Rice Pudding', ['Rice', 'Milk', 'Sugar'], 'dessert'), 'dessert');
+  assert.equal(course('Purée Crécy', ['Carrots', 'Stock'], 'soup'), 'soup');
+  assert.equal(course('Stewed Cauliflower', ['Cauliflower', 'Butter'], 'side'), 'side');
+});

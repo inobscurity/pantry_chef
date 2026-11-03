@@ -37,6 +37,7 @@
       thumb: '',
       area: r.cuisine || '',
       category: r.time ? `Takes ${r.time}` : '',
+      courseHint: Core.courseFromLabel(r.category), // proteins, seafood, vegetables, grains, desserts…
       tags: [],
       source: r.link || '',
       youtube: '',

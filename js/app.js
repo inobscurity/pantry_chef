@@ -11,6 +11,7 @@
     basics: load('basics', Core.DEFAULT_BASICS.slice()),
     spoonKey: load('spoonKey', ''),
     main: load('main', ''),  // the ingredient chosen as the main one; only recipes using it are shown
+    courses: load('courses', Core.DEFAULT_COURSES.slice()), // which courses are shown: mains and soups at first
     recipes: [],   // recipes from the last search, from every source
     groups: [],
     found: [],     // per source: { name, count } or { name, error }
@@ -277,7 +278,7 @@
       el('h3', null, recipe.name),
       el('div', { class: 'meta' }, `Uses ${usedYours} of your ${state.pantry.length} · ${plural(recipe.ingredients.length, 'ingredient')}`),
       need.length ? el('div', { class: 'buy' }, el('strong', null, 'Buy: '), listText(need)) : null,
-      el('div', { class: 'source-tag' }, recipe.sourceName)));
+      el('div', { class: 'source-tag' }, `${courseLabel(courseOf(recipe))} · ${recipe.sourceName}`)));
   }
 
   function renderGroup(group) {
@@ -303,9 +304,47 @@
   }
 
   // "Searched: TheMealDB 4 · Wikibooks Cookbook 7 · ForkRecipe 12 · Spoonacular failed"
-  function searchedLine() {
+  // ---- courses ----------------------------------------------------------------------
+
+  const courseCache = new WeakMap();
+  function courseOf(recipe) {
+    if (!courseCache.has(recipe)) courseCache.set(recipe, Core.courseOf(recipe));
+    return courseCache.get(recipe);
+  }
+  const COURSE_LABEL = { main: 'Main', soup: 'Soup', side: 'Side', starter: 'Starter', sauce: 'Sauce or extra', dessert: 'Dessert or baking', other: 'Other' };
+  const courseLabel = (id) => COURSE_LABEL[id] || '';
+
+  // The groups, with only the courses you've chosen.
+  function visibleGroups() {
+    return state.groups.map((g) => Object.assign({}, g, { recipes: g.recipes.filter((e) => state.courses.includes(courseOf(e.recipe))) }));
+  }
+
+  function toggleCourse(id) {
+    state.courses = state.courses.includes(id) ? state.courses.filter((c) => c !== id) : [...state.courses, id];
+    save('courses', state.courses);
+    renderResults();
+  }
+
+  // "Show: [Mains 24] [Soups 3] [Sides 40] …": mains and soups are on at first.
+  function courseButtons() {
+    const counts = new Map();
+    for (const g of state.groups) for (const e of g.recipes) counts.set(courseOf(e.recipe), (counts.get(courseOf(e.recipe)) || 0) + 1);
+    return el('div', { class: 'card notice courses' },
+      el('div', null, el('strong', null, 'Show'), ' (tap to choose):'),
+      el('div', { class: 'course-buttons' }, Core.COURSES.map((c) => {
+        const on = state.courses.includes(c.id);
+        return el('button', {
+          type: 'button',
+          class: 'course' + (on ? ' on' : ''),
+          'aria-pressed': on ? 'true' : 'false',
+          onclick: () => toggleCourse(c.id),
+        }, c.label, el('span', { class: 'count' }, String(counts.get(c.id) || 0)));
+      })));
+  }
+
+  function searchedLine(groups) {
     const shown = new Map();
-    for (const g of state.groups) {
+    for (const g of groups) {
       for (const r of g.recipes) {
         const key = r.recipe.sourceGroup || r.recipe.sourceName;
         shown.set(key, (shown.get(key) || 0) + 1);
@@ -330,7 +369,9 @@
         el('button', { type: 'button', class: 'btn link inline', onclick: search }, 'Find recipes again'),
         ' to update the list.'));
     }
-    top.push(searchedLine());
+    const groups = visibleGroups();
+    top.push(searchedLine(groups));
+    top.push(courseButtons());
     if (state.main) {
       top.push(el('div', { class: 'card notice stale' },
         el('div', null,
@@ -338,15 +379,18 @@
           el('button', { type: 'button', class: 'btn link inline', onclick: () => toggleMain(state.main) }, 'Show all'))));
     }
 
-    const total = state.groups.reduce((n, g) => n + g.recipes.length, 0);
+    const total = groups.reduce((n, g) => n + g.recipes.length, 0);
+    const hidden = state.groups.reduce((n, g) => n + g.recipes.length, 0) - total;
     if (!total) {
       $('results').replaceChildren(...top, el('div', { class: 'card error' },
-        el('strong', null, 'No recipes found within 3 extra ingredients. '),
-        'Try adding more ingredients or basics, or more general names, such as "chicken" rather than "chicken thighs".',
-        state.main ? ` Or clear ${state.main} as the main ingredient.` : ''));
+        hidden
+          ? [el('strong', null, `No recipes of the kinds you've chosen. `), `${plural(hidden, 'other recipe')} matched: tap a kind above to see them.`]
+          : [el('strong', null, 'No recipes found within 3 extra ingredients. '),
+            'Try adding more ingredients or basics, or more general names, such as "chicken" rather than "chicken thighs".',
+            state.main ? ` Or clear ${state.main} as the main ingredient.` : '']));
       return;
     }
-    $('results').replaceChildren(...top, ...state.groups.map(renderGroup));
+    $('results').replaceChildren(...top, ...groups.map(renderGroup));
   }
 
   // ---- recipe screen ----------------------------------------------------------------
@@ -461,7 +505,7 @@
         recipe.image ? picture(recipe.image, recipe.name) : null,
         el('div', { class: 'hero-text' },
           el('h2', null, recipe.name),
-          el('div', { class: 'meta' }, [recipe.area, recipe.category, ...recipe.tags].filter(Boolean).join(' · ')),
+          el('div', { class: 'meta' }, [courseLabel(courseOf(recipe)), recipe.area, recipe.category, ...recipe.tags].filter(Boolean).join(' · ')),
           el('ul', { class: 'stats' },
             el('li', null, el('strong', null, items.length), 'ingredients'),
             el('li', null, el('strong', null, have.length), 'you have'),

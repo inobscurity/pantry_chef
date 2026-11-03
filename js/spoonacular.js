@@ -153,6 +153,20 @@
    * Adds quantities, method and details to a recipe from the search.
    * Ingredients keep the have / need decision the search made, matched by ingredient id.
    */
+  // Spoonacular's dish types: "main course", "side dish", "soup", "dessert", "appetizer"…
+  function courseFromDishTypes(types) {
+    const t = (types || []).map((x) => String(x).toLowerCase());
+    const has = (...words) => words.some((w) => t.includes(w));
+    if (has('main course', 'main dish', 'dinner', 'lunch', 'breakfast', 'brunch', 'morning meal')) return 'main';
+    if (has('soup')) return 'soup';
+    if (has('side dish', 'salad')) return 'side';
+    if (has('dessert')) return 'dessert';
+    if (has('appetizer', 'starter', 'antipasti', 'antipasto', 'fingerfood', 'snack', "hor d'oeuvre")) return 'starter';
+    if (has('sauce', 'condiment', 'dip', 'spread', 'marinade', 'dressing')) return 'sauce';
+    if (has('beverage', 'drink')) return 'other';
+    return '';
+  }
+
   async function completeRecipe(recipe, key, { fetchImpl } = {}) {
     if (recipe.complete) return recipe;
     const info = await getJSON(`recipes/${recipe.spoonId}/information`, { includeNutrition: false }, key, fetchImpl);
@@ -174,6 +188,7 @@
 
     const tags = [...(info.dishTypes || []), ...(info.diets || [])].slice(0, 3);
     return Object.assign({}, recipe, {
+      courseHint: courseFromDishTypes(info.dishTypes) || recipe.courseHint || '',
       image: info.image || recipe.image,
       area: (info.cuisines || []).join(', '),
       category: info.readyInMinutes ? `Ready in ${info.readyInMinutes} min` : '',

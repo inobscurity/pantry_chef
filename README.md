@@ -26,6 +26,15 @@ Pick a recipe to see:
 - A count of ingredients, how many you have, how many to buy, and the number of steps, plus a link
   to the original recipe and, for openly licensed recipes, its credit and licence.
 
+**Kinds of dish**: recipes are sorted into Mains (meat, poultry, fish and seafood, and vegetarian
+mains such as omelettes, curries, pies and pasta), Soups, Sides, Starters, Sauces & extras
+(stuffings, gravies, dressings, stocks), Desserts & baking, and Other (drinks, preserves, pickles).
+Only Mains and Soups are shown at first; tap the buttons above the results to show others. The sort
+uses the recipe's name, its source's own label (TheMealDB and ForkRecipe categories, Wikibooks
+categories, Spoonacular dish types, the chapter it's in for the classic cookbooks), and its
+ingredients. Old cookbooks' "entrées" are meat dishes, so they count as mains; Starters are what
+Australians call entrées.
+
 **Main ingredient**: tap one of your ingredients to make it the main one (it gets a ★). Only
 recipes using it are shown, and the sources are searched for it. Tap it again to show everything.
 

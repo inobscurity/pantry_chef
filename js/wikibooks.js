@@ -126,6 +126,18 @@
   /*
    * Reads a Cookbook page. Returns null unless it has both ingredients and steps.
    */
+  // Wikibooks files recipes in course categories such as "Category:Side dish recipes". Only those
+  // are read; "Category:Pumpkin recipes" and the like say nothing about the course.
+  function courseFromCategories(categories) {
+    const titles = (categories || []).map((c) => String(c.title || '').replace(/^Category:/, ''));
+    const courses = titles
+      .filter((t) => /\b(?:side dish|main (?:course|dish)|soup|dessert|appetizer|starter|snack|sauce|condiment|dressing|beverage|drink|cocktail|salad|baked goods|bread|cake|cookie|pie|pastry|breakfast) recipes\b/i.test(t))
+      .map((t) => Core.courseFromLabel(t))
+      .filter(Boolean);
+    for (const c of ['main', 'soup', 'side', 'starter', 'sauce', 'dessert', 'other']) if (courses.includes(c)) return c;
+    return '';
+  }
+
   function parsePage(title, wikitext, thumbnail) {
     const ingredients = [];
     const steps = [];
@@ -237,7 +249,9 @@
     for (let i = 0; i < titles.length; i += 20) batches.push(titles.slice(i, i + 20));
     const pages = await Promise.allSettled(batches.map((batch) => api({
       action: 'query',
-      prop: 'revisions|pageimages',
+      prop: 'revisions|pageimages|categories',
+      cllimit: 'max',
+      clshow: '!hidden',
       rvprop: 'content',
       rvslots: 'main',
       piprop: 'thumbnail',
@@ -253,6 +267,7 @@
         const rev = page.revisions && page.revisions[0];
         const text = rev && ((rev.slots && rev.slots.main && rev.slots.main.content) || rev.content);
         const recipe = text && parsePage(page.title, text, page.thumbnail);
+        if (recipe) recipe.courseHint = courseFromCategories(page.categories);
         if (recipe && recipe.ingredients.some((ing) => pantry.some((x) => Core.ingredientMatches(x, ing.name)))) {
           recipes.push(recipe);
         }

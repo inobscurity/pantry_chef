@@ -75,6 +75,7 @@
       image: meal.strMealThumb,
       thumb: meal.strMealThumb ? meal.strMealThumb + '/medium' : '',
       category: meal.strCategory || '',
+      courseHint: Core.courseFromLabel(meal.strCategory), // Side, Starter, Dessert, Beef, Seafood…
       area: meal.strArea || '',
       tags: (meal.strTags || '').split(',').map((t) => t.trim()).filter(Boolean),
       source: meal.strSource || '',

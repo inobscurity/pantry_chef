@@ -180,6 +180,19 @@
   // pumpkin leaves aren't pumpkin, zucchini flowers aren't zucchini. Except for plants whose
   // leaves are what you'd normally buy: basil leaves are basil.
   const PLANT_PARTS = new Set(['leaf', 'flower', 'blossom', 'shoot', 'tendril', 'vine']);
+
+  // Meat, poultry and fish. A purée of these is a prepared dish, not the ingredient (a vegetable or
+  // fruit purée is still the vegetable: pumpkin purée is pumpkin). Also what makes a dish a main.
+  const MEAT_AND_FISH = new Set([
+    'beef', 'steak', 'veal', 'lamb', 'mutton', 'pork', 'ham', 'bacon', 'gammon', 'sausage', 'chicken',
+    'fowl', 'hen', 'capon', 'pullet', 'turkey', 'duck', 'duckling', 'goose', 'pigeon', 'squab', 'quail',
+    'pheasant', 'partridge', 'grouse', 'rabbit', 'hare', 'venison', 'game', 'goat', 'kid', 'meat', 'mince',
+    'kidney', 'liver', 'tongue', 'tripe', 'sweetbread', 'oxtail', 'brisket', 'sirloin', 'cutlet', 'chop',
+    'fish', 'salmon', 'cod', 'haddock', 'whiting', 'sole', 'plaice', 'turbot', 'halibut', 'mackerel',
+    'herring', 'trout', 'tuna', 'sardine', 'anchovy', 'eel', 'pike', 'perch', 'bream', 'snapper',
+    'flounder', 'barramundi', 'flathead', 'whitebait', 'prawn', 'crab', 'lobster', 'crayfish', 'oyster',
+    'mussel', 'clam', 'scallop', 'squid', 'octopus', 'calamari', 'shellfish', 'seafood', 'terrapin', 'turtle',
+  ]);
   const LEAFY = new Set([
     'basil', 'mint', 'parsley', 'coriander', 'sage', 'thyme', 'bay', 'curry', 'oregano', 'tarragon',
     'dill', 'rosemary', 'marjoram', 'sorrel', 'chive', 'lettuce', 'spinach', 'cabbage', 'kale',
@@ -191,7 +204,9 @@
     const x = tokens(a);
     const y = tokens(b);
     if (!x.length || !y.length) return false;
-    const changes = (w, shared) => DERIVED.has(w) || (PLANT_PARTS.has(w) && !shared.some((s) => LEAFY.has(s)));
+    const changes = (w, shared) => DERIVED.has(w)
+      || (PLANT_PARTS.has(w) && !shared.some((s) => LEAFY.has(s)))
+      || (w === 'puree' && shared.some((s) => MEAT_AND_FISH.has(s))); // chicken purée isn't chicken
     const within = (p, q) =>
       p.every((w) => q.includes(w)) && !q.some((w) => !p.includes(w) && changes(w, p));
     return within(x, y) || within(y, x);
@@ -442,9 +457,91 @@
     return steps.filter(Boolean);
   }
 
+  // ---- courses: main, side, soup… -----------------------------------------------------
+
+  const COURSES = [
+    { id: 'main', label: 'Mains' },
+    { id: 'soup', label: 'Soups' },
+    { id: 'side', label: 'Sides' },
+    { id: 'starter', label: 'Starters' },
+    { id: 'sauce', label: 'Sauces & extras' },
+    { id: 'dessert', label: 'Desserts & baking' },
+    { id: 'other', label: 'Other' },
+  ];
+  const DEFAULT_COURSES = ['main', 'soup'];
+
+  // What a recipe's name says it is. These are reliable, so they win over other clues.
+  const NAME_COURSE = [
+    ['other', /\b(?:to (?:pickle|preserve|pot|cure|dry|keep|bottle|candy)|pickled?|preserved?|wine|punch|cordial|lemonade|shrub|negus|posset|tea\b|coffee|cocoa|beer|ale\b|liqueur|cocktail drink|beverage)\b/],
+    ['sauce', /\b(?:sauce|gravy|dressing|stuffing|forcemeat|marinade|glaze|stock\b|court[- ]bouillon|garnish(?:ing)?|relish|chutney|ketchup|catsup|mayonnaise|vinaigrette|seasoning|roux|batter\b|frosting|icing|filling|mirepoix|aspic|brine|essence|fumet|panada|farce|quenelle mixture)\b|^\w+(?:\s\w+)? butter$|\bbutter (?:à|a) la\b/],
+    ['dessert', /\b(?:cakes?|puddings?|tarts?|tartlets?|cookies?|biscuits?|shortbread|scones?|muffins?|buns?|doughnuts?|ice[- ]cream|ices?\b|sorbet|sherbet|blanc-?mange|custard|trifle|meringues?|compote|charlotte|mousse|fudge|candy|candies|toffee|caramel|brittle|marmalade|jam\b|jelly|gingerbread|pastry|eclairs?|macaroons?|wafers?|crumble|cobbler|sweets?\b|bread\b|rolls?\b|loaf cake|crullers?|waffles?|pancakes?|griddle[- ]cakes?|syllabub|junket|bonbons?|kisses|drops\b)\b/],
+    ['soup', /\b(?:soup|broth|consomm[eé]|potage|bisque|chowder|gumbo|mulligatawn\w*|borscht|minestrone|bouillabaisse|purée of|puree of)\b/],
+    // Starters, which Australians call entrées. (Old cookbooks' "entrées" are meat dishes, so they're
+    // judged like any other dish.)
+    ['starter', /\b(?:canap[eé]s?|hors d.?oeuvres?|appetizers?|appetisers?|dips?\b|p[aâ]t[eé]\b|terrines?|crostini|bruschetta|antipast[oi]|amuse|savou?ry\b|savou?ries|devilled|deviled|toasts?\b|sandwich(?:es)?)\b/],
+  ];
+  const SWEET_PIE = /\b(?:apple|cherry|lemon|pumpkin|squash|mince ?meat|custard|cream|berry|berries|peach|apricot|rhubarb|plum|pear|fruit|chocolate|pecan|sweet potato|kumara|banana|raisin|cranberry|gooseberry|currant)\b.*\bpies?\b|\bpies?\b.*\b(?:apple|cherry|lemon)\b/;
+  const SWEET = /\b(?:sugar|honey|syrup|treacle|molasses|jam|chocolate|cocoa|marmalade|jelly|icing|caster|sweetening)\b/;
+  const VEG_MAIN = /\b(?:eggs|omelets?|omelettes?|frittata|quiche|souffl[eé]|loaf|cutlets?|roast|curry|stew|casserole|risotto|pilaf|pilau|pilaff|pasta|macaroni|spaghetti|noodles?|lasagne|lasagna|gnocchi|ravioli|pies?|tart\b|flan|pizza|rarebit|fondue|croquettes?|patties|rissoles?|burgers?|goulash|ragout|ragoût|hash|scramble|fritters?|timbales?|dumplings?|chilli|chili|tacos?|enchiladas?|paella|jambalaya|kedgeree|biryani|dal|dhal)\b/;
+  const VEG_PROTEIN = /\b(?:lentils?|chickpeas?|split peas?|haricot|beans?|nuts?|tofu|eggs?|cheese|macaroni|rice)\b/;
+
+  // A source's own label (a chapter, a category, a dish type) as one of COURSES.
+  function courseFromLabel(label) {
+    const l = String(label || '').toLowerCase();
+    if (!l) return '';
+    if (/side|vegetable|salad|potato|grain|rice dishes|cereal/.test(l)) return 'side';
+    if (/soup|broth|potage|consomm/.test(l)) return 'soup';
+    if (/starter|appeti|hors|snack|finger|antipast|savou?r/.test(l)) return 'starter';
+    if (/sauce|gravy|gravies|dressing|condiment|stuffing|forcemeat|garnish|stock|marinade|spread|dip|seasoning|spice/.test(l)) return 'sauce';
+    if (/dessert|pudding|cake|cookie|biscuit|pastry|pastries|pie|sweet|confection|candy|ice|cream|jell|baking|baked goods|bread|scone|muffin|tart/.test(l)) return 'dessert';
+    if (/drink|beverage|cocktail|preserve|pickle|jam|canning|invalid|condiment/.test(l)) return 'other';
+    if (/main|dinner|lunch|meat|beef|chicken|poultry|game|fish|seafood|lamb|mutton|pork|veal|goat|pasta|vegetarian|vegan|egg|cheese|breakfast|made dish|curr|protein/.test(l)) return 'main';
+    return '';
+  }
+
+  /*
+   * Which course a recipe is: main, soup, side, starter, sauce (and other extras), dessert (and
+   * baking) or other. Its name decides when it's clear ("…Sauce", "…Pudding"); then the source's
+   * label (recipe.courseHint: a book chapter, a category, a dish type); then its ingredients:
+   * meat, poultry or fish, or a vegetarian main (omelette, curry, lentils…), make a main; a dish
+   * of vegetables or grains is a side.
+   */
+  function courseOf(recipe) {
+    const name = String(recipe.name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); // consommé → consomme
+    const ings = ingredientsOf(recipe).map((i) => normalize(nameOf(i))).join(' | ');
+    const hasMeat = ings.split(/[ |]+/).some((w) => MEAT_AND_FISH.has(w));
+    const nameHasMeat = normalize(name).split(' ').some((w) => MEAT_AND_FISH.has(w));
+
+    if (/\bsalads?\b/.test(name)) return nameHasMeat ? 'main' : 'side';
+    if (/\bpies?\b/.test(name) && !SWEET_PIE.test(name)) return 'main';            // meat and savoury pies
+    for (const [course, pattern] of NAME_COURSE) {
+      if (!pattern.test(name)) continue;
+      if (course === 'dessert' && /\bbread\b/.test(name) && /\bsauce\b/.test(name)) return 'sauce';
+      if (course === 'dessert' && nameHasMeat) return 'main';                       // steak and kidney pudding, sausage rolls
+      if (course === 'dessert' && !SWEET.test(ings)
+        && /\b(?:puddings?|tarts?|tartlets?|custards?|souffle|pancakes?|fritters?)\b/.test(name)
+        && /\b(?:onion|cheese|tomato|leek|mushroom|spinach|potato|vegetable|egg|eggs|corn|savou?ry)\b/.test(name)) return 'main'; // onion tart
+      if (course === 'starter' && nameHasMeat && /\b(?:toasts?|sandwich)/.test(name)) return 'starter';
+      return course;
+    }
+    if (/\b(?:pie|pies)\b/.test(name)) return 'dessert';                           // sweet pies
+
+    // A dish named after meat or fish, or a main-dish word, is a main whatever chapter it sits in:
+    // chapters are clues, and a book's next chapter heading is sometimes missed.
+    if (nameHasMeat || VEG_MAIN.test(name)) return 'main';
+
+    let hint = recipe.courseHint || '';
+    if (hint === 'dessert' && !SWEET.test(ings)) hint = '';                            // nothing sweet in it
+    if (hint) return hint;
+
+    if (hasMeat || nameHasMeat || VEG_MAIN.test(name)) return 'main';
+    if (VEG_PROTEIN.test(ings) && ingredientsOf(recipe).length >= 4) return 'main';
+    return 'side';
+  }
+
   const api = {
     DEFAULT_BASICS, normalize, tokens, alternatives, ingredientMatches, basicMatches, coveredByBasics, isOptional, shortName, mainIngredients, nameOf,
-    classifyIngredients, groupRecipes, splitSteps, dedupe,
+    classifyIngredients, groupRecipes, splitSteps, dedupe, COURSES, DEFAULT_COURSES, courseOf, courseFromLabel,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RecipeCore = api;

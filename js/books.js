@@ -32,8 +32,8 @@
         data.books.forEach((book, b) => {
           book.start = r; // where this book's recipes begin, for following links
           for (let k = 0; k < book.count; k++, r++) {
-            const [name, keys] = data.recipes[r];
-            recipes.push({ b, k, name, keys });
+            const [name, keys, course] = data.recipes[r];
+            recipes.push({ b, k, name, keys, course });
           }
         });
         return { books: data.books, words: data.words, recipes };
@@ -74,9 +74,13 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
+  // The course of a recipe's chapter in its book (scripts/build_books.py, CHAPTER_WORDS).
+  const COURSE_CODES = { m: 'main', s: 'side', p: 'soup', t: 'starter', x: 'sauce', d: 'dessert', o: 'other' };
+
   function toRecipe(index, entry) {
     const book = index.books[entry.b];
     return {
+      courseHint: COURSE_CODES[entry.course] || '',
       id: `book-${book.id}-${entry.k}`,
       dedupeKey: `${book.id}|${Core.normalize(entry.name)}`,
       sourceName: shortTitle(book.title),

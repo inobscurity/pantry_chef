@@ -184,6 +184,59 @@ def clean_markup(line):
     return line
 
 
+# Chapter headings say what kind of dish follows: "SOUPS", "CHAPTER IX. FISH", "PUDDINGS AND PIES".
+# Stored as a one-letter course for each recipe (see COURSE_CODES in js/books.js).
+CHAPTER_WORDS = {
+    'p': {'soup', 'soups', 'broth', 'broths', 'potages', 'consommes', 'chowders'},
+    'x': {'sauces', 'sauce', 'gravies', 'gravy', 'stuffings', 'forcemeats', 'forcemeat', 'garnishes', 'stocks',
+          'relishes', 'dressings', 'marinades', 'seasonings'},
+    'd': {'puddings', 'pudding', 'tarts', 'pastry', 'pastries', 'cakes', 'cake', 'biscuits', 'cookies', 'breads',
+          'bread', 'rolls', 'creams', 'ices', 'jellies', 'confectionery', 'sweets', 'desserts', 'dessert',
+          'sweet', 'candies', 'candy', 'icings', 'fritters', 'pancakes', 'muffins', 'gingerbread', 'baking'},
+    'o': {'preserves', 'pickles', 'jams', 'beverages', 'drinks', 'invalids', 'invalid', 'sick', 'canning',
+          'wines', 'cordials'},
+    # Old cookbooks' "entrées" are made dishes of meat (Fillet of Beef, Larded): mains for us. Starters
+    # are what Australians call entrées: hors d'oeuvres, savouries, appetisers.
+    't': {'hors', "d'oeuvres", 'oeuvres', 'savouries', 'savories', 'sandwiches', 'appetizers', 'appetisers'},
+    's': {'vegetables', 'vegetable', 'salads', 'salad', 'cereals', 'potatoes'},
+    'm': {'fish', 'shellfish', 'oysters', 'meats', 'meat', 'beef', 'mutton', 'veal', 'lamb', 'pork', 'poultry',
+          'game', 'curries', 'eggs', 'cheese', 'joints', 'roasts', 'fowls', 'birds', 'venison', 'rabbits',
+          'macaroni', 'omelets', 'omelettes', 'made', 'dishes', 'pies', 'entrees', 'entrées', 'entree', 'entrée',
+          'relevés', 'releves', 'luncheon'},
+}
+CHAPTER_JOINERS = {'and', 'of', 'the', 'for', '&', 'with', 'etc', 'other', 'various', 'cold', 'hot', 'how', 'to',
+                   'cook', 'cookery', 'dressed', 'dressing', 'recipes', 'receipts', 'miscellaneous', 'a', 'in',
+                   'their', 'garnish', 'boiled', 'roast', 'roasted', 'fried'}
+
+
+SINGULAR_DISHES = {'soup', 'broth', 'sauce', 'gravy', 'forcemeat', 'pudding', 'cake', 'bread', 'salad', 'dessert',
+                   'sweet', 'candy', 'vegetable', 'entree', 'entrée', 'stuffing', 'dressing'}
+# (Kept for the check above: a lone "ENTRÉE" in capitals is a recipe's heading, not a chapter.)
+
+
+def chapter_course(raw):
+    """The course a chapter heading announces, as one letter, or '' if `raw` isn't one."""
+    t = clean_markup(raw).strip()
+    prefixed = re.match(r'(?i)^(?:chapter|chap\.?|part|section)\s+[ivxlc\d]+\b', t) is not None
+    t = re.sub(r'(?i)^(?:chapter|chap\.?|part|section)\s+[ivxlc\d]+\.?\s*[-—–:.]*\s*', '', t)
+    t = t.strip(' .:')
+    words = [w for w in re.split(r"[\s,;.—–-]+", t.lower()) if w]
+    if not words or len(words) > 8 or not re.sub(r'[^A-Za-z]', '', t).isupper():
+        return ''
+    found = [code for code, vocab in CHAPTER_WORDS.items() for w in words if w in vocab]
+    if not found or any(w not in CHAPTER_JOINERS and not any(w in v for v in CHAPTER_WORDS.values()) for w in words):
+        return ''
+    # "FISH SAUCE" or "BREAD SAUCE" in capitals is a recipe; chapters are plural ("SAUCES").
+    if not prefixed and any(w in SINGULAR_DISHES for w in words):
+        return ''
+    if words in (['made', 'dishes'],) or set(words) <= {'made', 'dishes'}:
+        return 'm'
+    for code in 'pxdots m'.replace(' ', ''):                       # soup, sauce, dessert, other, starter, side, main
+        if code in found:
+            return code
+    return ''
+
+
 def heading_number(raw):
     """The recipe's number, if its heading starts with one: "99. Bouillon Blanc", "51—PROVENÇALE"."""
     m = re.match(r'^\s*(?:No\.\s*)?(\d{1,4})[a-z]?\s*(?:\.|—|–|--)\s*\S', clean_markup(raw))
@@ -312,7 +365,8 @@ def finish(recipe):
                 have.add(key)
     if len(ingredients) < 2:
         return None
-    name = re.sub(r"[\s,.;:'’\"*•\-]+$", '', recipe['name']).strip()
+    name = re.sub(r'\.\s+(?:Mrs|Miss|Mr|Dr|Madame|Mme)\b\.?\s.*$', '', recipe['name'])   # ". Mrs. G. H. Wright"
+    name = re.sub(r"[\s,.;:'’\"*•\-]+$", '', name).strip()
     # Mrs Beeton's notes after the method aren't steps: "Seasonable from May to October.",
     # "Sufficient for 8 persons." (kept as how many it serves), "Average cost, 1s."
     steps = []
@@ -336,11 +390,14 @@ def finish(recipe):
 def read_book(text):
     text = gutenberg_body(text.replace('\r', ''))
     recipes, current = [], None
+    chapter = ''
 
     def close():
         nonlocal current
         r = finish(current)
         if r:
+            if current.get('chapter'):
+                r['c'] = current['chapter']
             recipes.append(r)
         current = None
 
@@ -351,11 +408,19 @@ def read_book(text):
         if len(lines) == 2 and re.match(r'^\s*\(.*\)\s*$', clean_markup(lines[1])):
             lines = lines[:1]                                             # "PUMPKIN SOUP" / "(Zuppa di Zucca)"
             joined = clean_markup(lines[0])
+        if len(lines) <= 2:
+            course = chapter_course(' '.join(lines))
+            if course:
+                close()
+                chapter = course
+                continue
+            if re.match(r'(?i)^\s*(?:index|contents)\b', joined):
+                chapter = ''
         if len(lines) == 1:
             name = heading_text(lines[0])
             if name:
                 close()
-                current = {'name': name, 'paras': [], 'list': [], 'num': heading_number(lines[0])}
+                current = {'name': name, 'paras': [], 'list': [], 'num': heading_number(lines[0]), 'chapter': chapter}
                 continue
             if re.match(r'^\(.*\)$', joined.strip()) and current and not current['paras']:
                 continue                                                  # "(Zuppa di Zucca)"
@@ -386,7 +451,7 @@ def read_book(text):
         inline = inline_heading(joined) if not indented or len(lines) > 1 else None
         if inline and len(inline[1]) > 40:
             close()
-            current = {'name': inline[0], 'paras': [inline[1]], 'list': [], 'num': heading_number(joined)}
+            current = {'name': inline[0], 'paras': [inline[1]], 'list': [], 'num': heading_number(joined), 'chapter': chapter}
             continue
 
         if current is None:
@@ -629,7 +694,7 @@ def main(argv):
                 name, measure = item
                 k = word_id(match_name(name, measure, r['n']))
                 keys.append(-k - 1 if OPTIONAL.search(name + ' ' + measure) else k)
-            index.append([r['n'], keys])
+            index.append([r['n'], keys, r['c']] if r.get('c') else [r['n'], keys])
             details.append([r['i'], r['steps'], r.get('t', ''), r.get('s', '')])
         (OUT / f'{bid}.json').write_text(json.dumps(details, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
     (OUT / 'index.json').write_text(json.dumps({
