@@ -94,9 +94,11 @@ test('with a main ingredient chosen, only recipes using it are shown', () => {
   assert.deepEqual(main, ['Pumpkin Soup']);
 });
 
-test('a recipe only has to use one of your ingredients', () => {
-  const groups = Core.groupRecipes([R('Plain rice', 'Rice', 'Water', 'Salt')], ['chicken', 'rice', 'onion', 'carrot', 'cheese'], Core.DEFAULT_BASICS);
-  assert.equal(groups[0].recipes[0].recipe.name, 'Plain rice');
+test('ingredients a recipe doesn\'t use are fine, as long as it uses half of yours', () => {
+  const pantry = ['chicken', 'rice', 'onion', 'carrot', 'cheese'];
+  const recipes = [R('Plain rice', 'Rice', 'Water', 'Salt'), R('Chicken pilaf', 'Chicken', 'Rice', 'Onion', 'Carrot', 'Stock')];
+  const names = Core.groupRecipes(recipes, pantry, Core.DEFAULT_BASICS).flatMap((g) => g.recipes.map((r) => r.recipe.name));
+  assert.deepEqual(names, ['Chicken pilaf']); // plain rice uses only 1 of your 5
 });
 
 test('a source can decide which ingredients you have', () => {
@@ -164,7 +166,7 @@ test('recipes are built around your main ingredients, not your salt and butter',
   ];
   const groups = Core.groupRecipes(recipes, pantry, Core.DEFAULT_BASICS, 3);
   const names = groups.map((g) => g.recipes.map((r) => r.recipe.name));
-  assert.deepEqual(names, [[], ['Pumpkin Soup', 'Butter Baked Onion'], [], []]);
+  assert.deepEqual(names, [[], ['Pumpkin Soup'], [], []]); // butter baked onion uses only 2 of your 5
 });
 
 test('only minor ingredients listed: they all count', () => {
@@ -182,4 +184,16 @@ test('real lines from Wikibooks pumpkin soups are read fairly', () => {
   assert.equal(status('Cream'), 'need');
   assert.ok(!Core.ingredientMatches('potato', 'Sweet potatoes'));
   assert.ok(Core.ingredientMatches('kumara', 'Sweet potato'));
+});
+
+test('a recipe must use at least half of the ingredients you listed, not counting basics', () => {
+  // 5 listed ingredients that aren't basics (salt and pepper are): a recipe needs 3 of them.
+  const pantry = ['pumpkin', 'onion', 'butter', 'sour cream', 'chicken stock', 'salt', 'pepper'];
+  const recipes = [
+    R('Three of yours', 'Pumpkin', 'Onion', 'Butter', 'Milk', 'Salt'),
+    R('Two of yours', 'Pumpkin', 'Onion', 'Milk', 'Salt', 'Pepper'),
+    R('Two plus basics', 'Pumpkin', 'Butter', 'Salt', 'Pepper', 'Water'),
+  ];
+  const names = Core.groupRecipes(recipes, pantry, Core.DEFAULT_BASICS, 3).flatMap((g) => g.recipes.map((r) => r.recipe.name));
+  assert.deepEqual(names, ['Three of yours']);
 });

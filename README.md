@@ -1,8 +1,8 @@
 # Pantry Chef
 
 Type the ingredients you have, and Pantry Chef finds recipes and groups them by how many more
-ingredients you'd need to buy. A recipe only has to use one of your ingredients; ones you listed
-but it doesn't use are ignored.
+ingredients you'd need to buy. A recipe must use at least half of the ingredients you listed
+(see the rules below); ones it doesn't use are ignored.
 
 | Group | Meaning |
 | --- | --- |
@@ -28,6 +28,9 @@ Pick a recipe to see:
 
 **Main ingredient**: tap one of your ingredients to make it the main one (it gets a ★). Only
 recipes using it are shown, and the sources are searched for it. Tap it again to show everything.
+
+**Uses at least half of yours**: a recipe must use at least half of the ingredients you listed
+(basics in your list don't count). The aim is to cook with what you have, not to buy most of a dish.
 
 **Too many extra ingredients**: a recipe with more than twice as many ingredients as it takes from
 your list is left out. Basics (in the recipe or in your list) and optional ingredients don't count

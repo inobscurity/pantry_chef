@@ -266,11 +266,14 @@
    *  - A recipe with more than twice as many ingredients as it takes from the ingredients
    *    you listed is left out. Basics (salt, pepper… whatever is in your basics, even if you
    *    also listed it) and optional ingredients don't count on either side.
+   *  - A recipe must use at least half of the ingredients you listed, not counting basics:
+   *    the point is to cook with what you have, not to buy most of a dish.
    *  - options.main: the ingredient you chose as the main one. Only recipes using it are shown.
    */
   function groupRecipes(recipes, pantry, basics, maxMissing, options) {
     const main = options && options.main;
     const myBasics = basics || [];
+    const listed = pantry.filter((p) => !coveredByBasics(myBasics, p));      // your list, without basics
     const mains = mainIngredients(pantry, basics);
     const limit = maxMissing == null ? 3 : maxMissing;
     const groups = [];
@@ -286,6 +289,8 @@
       const counted = items.filter((i) => i.status !== 'optional' && i.status !== 'staple' && !coveredByBasics(myBasics, i.name));
       const fromYours = counted.filter((i) => i.status === 'have').length;
       if (counted.length > 2 * fromYours) continue;
+      const usesListed = listed.filter((p) => recipe.ingredients.some((i) => ingredientMatches(p, i.name))).length;
+      if (usesListed * 2 < listed.length) continue;
       const usedMain = mains.filter((m) => recipe.ingredients.some((i) => ingredientMatches(m, i.name))).length;
       if (usedMain === 0) continue;
       const usedYours = pantry.filter((p) => recipe.ingredients.some((i) => ingredientMatches(p, i.name))).length;
