@@ -40,6 +40,11 @@ either way. So a recipe using 3 of your ingredients may have at most 6.
 salt, pepper, oil and water; add butter, flour, garlic or whatever is always in your kitchen.
 "Oil" covers olive and vegetable oil, and "pepper" covers black pepper but not red peppers.
 
+**Different names for the same ingredient** are matched: butternut pumpkin and butternut squash,
+capsicum and bell pepper, zucchini and courgette, coriander and cilantro, rocket and arugula,
+silverbeet and Swiss chard, cornflour and cornstarch, plain and all-purpose flour, bicarb and
+baking soda, prawns and shrimp, mince and ground meat, and more (see `SYNONYMS` in `js/core.js`).
+
 **Optional ingredients** (marked optional, or "to serve" / "to garnish") never count as "to buy".
 
 ## Recipe sources

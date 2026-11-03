@@ -208,3 +208,28 @@ test('leaves and flowers are a different ingredient, except for herbs and leafy 
     assert.ok(Core.ingredientMatches(a, b), `${a} should cover ${b}`);
   }
 });
+
+test('different names for the same ingredient match both ways', () => {
+  const pairs = [
+    ['butternut pumpkin', 'Butternut squash'], ['butternut pumpkin', '2 butternut squashes'], ['pumpkin', 'Butternut squash'],
+    ['pumpkin', 'Kabocha squash'], ['kumara', 'Sweet potatoes'], ['capsicum', 'Red bell pepper'], ['eggplant', 'Aubergine'],
+    ['zucchini', 'Courgettes'], ['coriander', 'Fresh cilantro'], ['spring onion', 'Scallions'], ['spring onion', 'Green onions'],
+    ['prawns', 'Shrimp'], ['rocket', 'Arugula'], ['silverbeet', 'Swiss chard'], ['snow peas', 'Mangetout'],
+    ['rockmelon', 'Cantaloupe'], ['beetroot', 'Beets'], ['swede', 'Rutabaga'], ['pawpaw', 'Papaya'], ['bok choy', 'Pak choi'],
+    ['wombok', 'Napa cabbage'], ['chickpeas', 'Garbanzo beans'], ['broad beans', 'Fava beans'], ['green beans', 'French beans'],
+    ['corn', 'Sweetcorn'], ['chilli', 'Red chili'], ['yoghurt', 'Greek yogurt'], ['chicken stock', 'Chicken broth'],
+    ['sour cream', 'Soured cream'], ['cream', 'Double cream'], ['cream', 'Heavy cream'], ['cornflour', 'Cornstarch'],
+    ['plain flour', 'All-purpose flour'], ['self-raising flour', 'Self-rising flour'], ['bicarbonate of soda', 'Baking soda'],
+    ['icing sugar', 'Powdered sugar'], ['caster sugar', 'Superfine sugar'], ['tomato paste', 'Tomato purée'],
+    ['beef mince', 'Ground beef'], ['beef mince', 'Minced beef'],
+  ];
+  for (const [a, b] of pairs) {
+    assert.ok(Core.ingredientMatches(a, b), `${a} should cover ${b}`);
+    assert.ok(Core.ingredientMatches(b, a), `${b} should cover ${a}`);
+  }
+  // ...without mixing up different things
+  for (const [a, b] of [['pumpkin', 'Zucchini'], ['corn', 'Cornstarch'], ['cream', 'Sour cream'], ['beef mince', 'Pork mince'],
+    ['chilli', 'Bell pepper'], ['potato', 'Sweet potato']]) {
+    assert.ok(!Core.ingredientMatches(a, b), `${a} should not cover ${b}`);
+  }
+});
