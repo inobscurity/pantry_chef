@@ -55,6 +55,9 @@ def capital(name):
     return ' '.join(w if (i and w in small) else w[:1].upper() + w[1:] for i, w in enumerate(words))
 
 
+SALT_PORK_BEFORE = re.compile(r'(?i)\b(?:salt(?:ed)?|fat|larding|pickled)\s+(?:(?:breast|belly|streaky|piece|pieces|slices?|strips?)\s+(?:of\s+)?)?$')
+
+
 def ingredients_in_prose(text):
     """Ingredient names mentioned in a paragraph, in order, without repeats."""
     text = SIZE_OF.sub(' ', text)
@@ -72,6 +75,12 @@ def ingredients_in_prose(text):
         if re.search(r'\b(?:no|without|instead of|not)\s+(?:\w+\s+)?$', text[max(0, m.start() - 20):m.start()], re.I):
             continue                                                      # "but no butter"
         name = re.sub(r'[\s-]+', ' ', m.group(1).lower())
+        # "salted breast of pork", "fat pork": salt pork, used for its fat. A later plain "pork"
+        # in the same recipe ("drain the pork") is the same salt pork.
+        if name == 'pork' and SALT_PORK_BEFORE.search(text[max(0, m.start() - 30):m.start()]):
+            name = 'salt pork'
+        if name == 'pork' and 'salt pork' in seen:
+            continue
         key = re.sub(r'(ies|es|s)$', '', name)
         if key in seen:
             continue

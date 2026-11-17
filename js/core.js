@@ -54,6 +54,10 @@
     // matches plain "pepper", the spice.
     [/\b(?:(?:red|green|yellow|orange|purple)\s+)?(?:capsicums?|bell peppers?)\b/g, 'capsicum'],
     [/\b(?:aubergines?|brinjals?)\b/g, 'eggplant'],
+    // Salt pork and pork fat are used for their fat (larding, frying, flavouring a stew), so
+    // they aren't "pork": a boiled turkey larded with salt pork isn't a pork dish.
+    [/\b(?:fat[\s-]+)?salt(?:ed)?[\s-]+(?:fat[\s-]+)?(?:(?:breast|belly|streaky)[\s-]+(?:of[\s-]+)?)?pork\b|\bpickled[\s-]+pork[\s-]+fat\b/g, 'saltpork'],
+    [/\b(?:fat|larding|fresh[\s-]+fat)[\s-]+pork\b|\bpork[\s-]+(?:fat|rinds?|lard|drippings?|crackling|scratchings?)\b/g, 'porkfat'],
     [/\bcourgettes?\b/g, 'zucchini'],
     [/\bcilantro\b/g, 'coriander'],
     [/\b(?:scallions?|green onions?|salad onions?)\b/g, 'spring onion'],
@@ -386,6 +390,13 @@
     return recipe.ingredients.filter((i) => !i.subRecipe);
   }
 
+  // Old cookbooks mix advice in with their recipes: "A Hint for Pork Pie", "Suggestions for
+  // Cooking Root Vegetables", "How to Buy Meat Economically". These aren't dishes.
+  const NOT_A_RECIPE = /^(?:a\s+|some\s+|general\s+|useful\s+|more\s+|further\s+|additional\s+|important\s+)?(?:hints?|tips?(?![\s-]*top)(?!\s+of\b)|notes?|remarks?|observations?|suggestions?|advice|cautions?|general directions?|directions for|rules? for (?!under|upper)|how to (?:buy|choose|select|tell|know|judge)|to (?:choose|select|tell|know|judge)\b)/i;
+  function isNotARecipe(recipe) {
+    return NOT_A_RECIPE.test(String(recipe.name || '').trim());
+  }
+
   function groupRecipes(recipes, pantry, basics, maxMissing, options) {
     const main = options && options.main;
     const myBasics = basics || [];
@@ -397,6 +408,7 @@
       groups.push({ missing: i, title: GROUP_TITLES[i] || `Buy ${i} ingredients`, recipes: [] });
     }
     for (const recipe of recipes) {
+      if (isNotARecipe(recipe)) continue;
       const items = classifyIngredients(recipe, pantry, basics);
       const need = items.filter((i) => i.status === 'need');
       const used = items.filter((i) => i.status === 'have').length;
@@ -555,7 +567,7 @@
   }
 
   const api = {
-    DEFAULT_BASICS, normalize, tokens, alternatives, ingredientMatches, basicMatches, coveredByBasics, isOptional, shortName, mainIngredients, nameOf,
+    DEFAULT_BASICS, normalize, tokens, alternatives, ingredientMatches, basicMatches, coveredByBasics, isOptional, isNotARecipe, shortName, mainIngredients, nameOf,
     classifyIngredients, groupRecipes, splitSteps, dedupe, COURSES, DEFAULT_COURSES, courseOf, courseFromLabel,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

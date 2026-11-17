@@ -380,3 +380,15 @@ test('a main chapter only counts when something makes the dish a main', () => {
   assert.equal(course('Oyster Dressing', ['Oysters', 'Bread'], 'main'), 'sauce');
   assert.equal(course('Macaroni Cheese', ['Macaroni', 'Cheese', 'Milk', 'Butter'], 'main'), 'main');
 });
+
+test('salt pork and pork fat are not pork; hints and tips are not recipes', () => {
+  for (const n of ['salt pork', 'fat salt pork', 'salted breast of pork', 'fat pork', 'pork fat', 'pork rind']) {
+    assert.equal(Core.ingredientMatches('pork', n), false, n);
+  }
+  assert.ok(Core.ingredientMatches('pork', 'pork chops'));
+  assert.ok(Core.ingredientMatches('salt pork', 'fat salt pork'));
+  assert.ok(Core.isNotARecipe({ name: 'A Hint for Pork Pie' }));
+  assert.ok(Core.isNotARecipe({ name: 'Suggestions for Cooking Root Vegetables' }));
+  assert.equal(Core.isNotARecipe({ name: 'Tip-top Cake' }), false);
+  assert.equal(Core.isNotARecipe({ name: 'Pork Chops' }), false);
+});
