@@ -355,6 +355,9 @@
     { site: 'tasteofhome.com', name: 'Taste of Home' },
     { site: 'bbcgoodfood.com', name: 'BBC Good Food' },
     { site: 'jamieoliver.com', name: 'Jamie Oliver' },
+    // The supermarkets' recipe sections, so the search skips their product pages.
+    { site: 'woolworths.com.au/shop/recipes', name: 'Woolworths' },
+    { site: 'coles.com.au/recipes-inspiration', name: 'Coles' },
   ];
 
   function tasteSearchWords() {
