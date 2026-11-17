@@ -359,6 +359,7 @@
     { site: 'woolworths.com.au/shop/recipes', name: 'Woolworths' },
     { site: 'coles.com.au/recipes-inspiration', name: 'Coles' },
     { site: 'aldi.com.au/recipes', name: 'Aldi' },
+    { site: 'iga.com.au/recipes', name: 'IGA' },
   ];
 
   function tasteSearchWords() {
