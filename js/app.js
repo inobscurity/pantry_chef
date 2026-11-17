@@ -353,6 +353,7 @@
     { site: 'delicious.com.au', name: 'delicious.' },
     { site: 'recipetineats.com', name: 'RecipeTin Eats' },
     { site: 'tasteofhome.com', name: 'Taste of Home' },
+    { site: 'bbcgoodfood.com', name: 'BBC Good Food' },
   ];
 
   function tasteSearchWords() {
