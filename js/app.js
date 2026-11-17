@@ -350,6 +350,8 @@
     { site: 'taste.com.au', name: 'taste.com.au' },
     { site: 'bestrecipes.com.au', name: 'Best Recipes' },
     { site: 'allrecipes.com', name: 'Allrecipes' },
+    { site: 'delicious.com.au', name: 'delicious.' },
+    { site: 'recipetineats.com', name: 'RecipeTin Eats' },
   ];
 
   function tasteSearchWords() {

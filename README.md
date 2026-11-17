@@ -113,7 +113,7 @@ app lists how many recipes each source contributed, and says if a source couldn'
   recipes about 1 more. If the key is rejected or the allowance is used up, the other sources
   still work.
 
-**taste.com.au, Best Recipes and Allrecipes**: taste.com.au's robots.txt forbids collecting its
+**taste.com.au, Best Recipes, Allrecipes, delicious. and RecipeTin Eats**: taste.com.au's robots.txt forbids collecting its
 content by automated means without the publisher's written permission, and the others' terms are
 similar, so the app doesn't read them. Instead, the results have links that open a Google search of
 each site for your main ingredient and up to three others. There's also a link that opens
