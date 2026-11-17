@@ -358,6 +358,7 @@
     // The supermarkets' recipe sections, so the search skips their product pages.
     { site: 'woolworths.com.au/shop/recipes', name: 'Woolworths' },
     { site: 'coles.com.au/recipes-inspiration', name: 'Coles' },
+    { site: 'aldi.com.au/recipes', name: 'Aldi' },
   ];
 
   function tasteSearchWords() {
