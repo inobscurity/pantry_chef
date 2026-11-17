@@ -1,0 +1,44 @@
+# Builds the Android app and publishes it as the "android" release, so it can be downloaded on a
+# phone from the repository's Releases page. Runs when the app changes, or by hand.
+name: Android app
+
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Build
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk ../PantryChef.apk
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android --yes --cleanup-tag || true
+          gh release create android PantryChef.apk \
+            --title "Pantry Chef for Android (build ${{ github.run_number }})" \
+            --notes "Download PantryChef.apk on your Android phone and open it to install. See the README for steps." \
+            --latest

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>Pantry Chef</title>
-  <link rel="stylesheet" href="styles.css?v=202611171105">
+  <link rel="stylesheet" href="styles.css?v=202611171114">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
@@ -54,9 +54,11 @@
           <p>Save recipes from any recipe website (taste.com.au, RecipeTin Eats, BBC Good Food…) with the
             <strong>Save to Pantry Chef</strong> bookmark. Open a recipe, tap the bookmark, and it's added here
             and to your searches.</p>
-          <p><strong>On a computer:</strong> drag this to your bookmarks bar:
+          <p class="android-only">In the app, open a recipe from a search link and tap <strong>Save to Pantry Chef</strong>
+            at the bottom of the page.</p>
+          <p class="web-only"><strong>On a computer:</strong> drag this to your bookmarks bar:
             <a id="bookmark-link" class="bookmarklet" href="#">Save to Pantry Chef</a></p>
-          <p><strong>On a phone:</strong> bookmark any page, then edit that bookmark: name it
+          <p class="web-only"><strong>On a phone:</strong> bookmark any page, then edit that bookmark: name it
             <em>Save to Pantry Chef</em> and replace its address with the bookmark code
             (<button type="button" id="copy-bookmark" class="btn link inline">Copy the bookmark</button>).
             To use it on a recipe page in Chrome, type <em>Save to Pantry Chef</em> in the address bar and tap the
@@ -105,13 +107,13 @@
     and the <a href="https://archive.org" target="_blank" rel="noopener">Internet Archive</a>.
   </footer>
 
-  <script src="js/core.js?v=202611171105"></script>
-  <script src="js/mealdb.js?v=202611171105"></script>
-  <script src="js/spoonacular.js?v=202611171105"></script>
-  <script src="js/wikibooks.js?v=202611171105"></script>
-  <script src="js/forkrecipe.js?v=202611171105"></script>
-  <script src="js/books.js?v=202611171105"></script>
-  <script src="js/myrecipes.js?v=202611171105"></script>
-  <script src="js/app.js?v=202611171105"></script>
+  <script src="js/core.js?v=202611171114"></script>
+  <script src="js/mealdb.js?v=202611171114"></script>
+  <script src="js/spoonacular.js?v=202611171114"></script>
+  <script src="js/wikibooks.js?v=202611171114"></script>
+  <script src="js/forkrecipe.js?v=202611171114"></script>
+  <script src="js/books.js?v=202611171114"></script>
+  <script src="js/myrecipes.js?v=202611171114"></script>
+  <script src="js/app.js?v=202611171114"></script>
 </body>
 </html>

@@ -125,6 +125,22 @@ your browser. Saved recipes join your searches like any other source, follow all
 back to the site. Set up the bookmark, and see or remove saved recipes, under **My recipes** in the
 app. Nothing is collected automatically: one page, when you tap the bookmark.
 
+## Android app
+
+`android/` is Pantry Chef as an Android app. It shows the Pantry Chef website (so it always has
+the latest version), and opens links to other sites (the recipe searches, a recipe's original page)
+in a built-in browser with a **Save to Pantry Chef** button. The button runs the website's own
+recipe reader on that page and saves the recipe to My recipes, like the bookmark.
+
+GitHub builds it whenever `android/` changes (`.github/workflows/android.yml`) and publishes
+`PantryChef.apk` as the **android** release. To install it: on your Android phone, open the
+repository's Releases page, download `PantryChef.apk`, open it, and allow your browser to install
+apps when asked. Later versions install over it. The signing key is kept in the repository so every
+build can update the last; the app is installed by hand, not published on the Play Store.
+
+Recipes saved in the app are kept in the app; ones saved with the bookmark in a browser stay in that
+browser.
+
 ## Run it
 
 It's a static site with no build step and no server.

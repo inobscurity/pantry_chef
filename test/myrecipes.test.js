@@ -62,7 +62,13 @@ test('the bookmark is a javascript: link that opens Pantry Chef', () => {
   const href = My.bookmarkHref('https://inobscurity.github.io/pantry_chef/');
   assert.match(href, /^javascript:/);
   const code = decodeURIComponent(href.slice('javascript:'.length));
-  assert.ok(code.includes("'https://inobscurity.github.io/pantry_chef/'"));
+  assert.ok(code.includes('"https://inobscurity.github.io/pantry_chef/"'));
   assert.ok(!code.includes('__APP__'));
   assert.doesNotThrow(() => new Function(code)); // it's valid code
+});
+
+test('the Android app gets reader code that returns the recipe as JSON text', () => {
+  const code = My.extractorCode();
+  assert.doesNotThrow(() => new Function('return ' + code));
+  assert.match(code, /JSON\.stringify\(d\)/);
 });

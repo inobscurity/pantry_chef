@@ -125,6 +125,25 @@
     $('my-recipes').open = true;
   }
 
+  // The Android app's Save button calls this with what it read from the recipe page.
+  window.PantryChefSave = (details) => {
+    const saved = window.MyRecipes.save(details, { parseIngredient: window.Wikibooks._internal.parseIngredient });
+    $('save-msg').textContent = saved ? `Saved “${saved.name}” to My recipes.` : "That page's recipe couldn't be saved: it had no ingredient list.";
+    renderMyRecipes();
+    if (saved) location.hash = 'recipe/' + encodeURIComponent(saved.id);
+    return !!saved;
+  };
+
+  // In the Android app, links to other sites open in the app's own browser, which has the Save
+  // button, instead of leaving the app.
+  document.addEventListener('click', (e) => {
+    if (!window.PantryChefAndroid) return;
+    const a = e.target.closest && e.target.closest('a[target="_blank"]');
+    if (!a || !/^https?:/i.test(a.href)) return;
+    e.preventDefault();
+    window.PantryChefAndroid.openBrowser(a.href);
+  });
+
   function renderMyRecipes() {
     const list = window.MyRecipes.all();
     $('my-summary').textContent = list.length ? `${list.length} saved` : 'none saved yet';
@@ -140,6 +159,7 @@
           if (state.searched) state.stale = true, renderResults();
         },
       }, '×'))));
+    document.body.classList.toggle('in-android-app', !!window.PantryChefAndroid);
     const href = window.MyRecipes.bookmarkHref(location.origin + location.pathname);
     $('bookmark-link').setAttribute('href', href);
     $('copy-bookmark').onclick = async (e) => {

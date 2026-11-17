@@ -16,10 +16,9 @@
   // ---- the bookmark -----------------------------------------------------------------
 
   /* eslint-disable */
-  // Runs on the recipe page, not in Pantry Chef, so it uses nothing from this file. '__APP__' is
-  // replaced with Pantry Chef's address.
-  function bookmark() {
-    var APP = '__APP__';
+  // Reads the recipe on the page it runs on: the bookmark runs it on a recipe site, and so does the
+  // Android app's Save button. It uses nothing from this file. Returns the details, or null.
+  function extract() {
     function list(x) { return x == null ? [] : Array.isArray(x) ? x : [x]; }
     function isRecipe(o) { return o && list(o['@type']).some(function (t) { return /Recipe$/i.test(String(t)); }); }
     function find(o) {
@@ -31,7 +30,7 @@
     var recipe = null;
     var scripts = document.querySelectorAll('script[type="application/ld+json"]');
     for (var i = 0; i < scripts.length && !recipe; i++) { try { recipe = find(JSON.parse(scripts[i].textContent)); } catch (e) {} }
-    if (!recipe) { alert('Pantry Chef: no recipe found on this page.'); return; }
+    if (!recipe) return null;
     function text(x) {   // plain text from text that may hold HTML; DOMParser runs no scripts
       var doc = new DOMParser().parseFromString(String(x == null ? '' : x), 'text/html');
       return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
@@ -46,7 +45,7 @@
       return out;
     }
     function image(x) { x = list(x)[0]; return typeof x === 'string' ? x : (x && (x.url || x.contentUrl)) || ''; }
-    var details = {
+    return {
       n: text(recipe.name),
       i: list(recipe.recipeIngredient || recipe.ingredients).map(text).filter(Boolean),
       s: steps(recipe.recipeInstructions),
@@ -57,15 +56,22 @@
       y: text(list(recipe.recipeYield)[0]),
       t: text(recipe.totalTime),
     };
-    var url = APP + '#save=' + encodeURIComponent(JSON.stringify(details));
-    var w = window.open(url, '_blank');
-    if (!w) location.href = url;
   }
   /* eslint-enable */
 
-  // The bookmark's address (a javascript: link), for Pantry Chef at `appUrl`.
+  // The bookmark's address (a javascript: link): read the page, then open Pantry Chef at `appUrl`.
   function bookmarkHref(appUrl) {
-    return 'javascript:' + encodeURIComponent('(' + bookmark.toString().replace('__APP__', appUrl) + ')()');
+    const code = '(function () { var d = (' + extract.toString() + ')();'
+      + " if (!d) { alert('Pantry Chef: no recipe found on this page.'); return; }"
+      + ' var url = ' + JSON.stringify(appUrl) + " + '#save=' + encodeURIComponent(JSON.stringify(d));"
+      + " var w = window.open(url, '_blank'); if (!w) location.href = url; })()";
+    return 'javascript:' + encodeURIComponent(code);
+  }
+
+  // For the Android app's Save button: code that reads the page and gives back the details as
+  // JSON text ('' if there's no recipe).
+  function extractorCode() {
+    return '(function () { var d = (' + extract.toString() + ')(); return d ? JSON.stringify(d) : \'\'; })()';
   }
 
   // ---- saved recipes ----------------------------------------------------------------
@@ -157,7 +163,7 @@
     return all(storage).filter((r) => r.ingredients.some((ing) => mains.some((m) => Core.ingredientMatches(m, ing.name))));
   }
 
-  const api = { bookmarkHref, save, remove, all, findRecipes, _internal: { bookmark, duration, load } };
+  const api = { bookmarkHref, extractorCode, save, remove, all, findRecipes, _internal: { extract, duration, load } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MyRecipes = api;
 })(typeof self !== 'undefined' ? self : this);

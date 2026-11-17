@@ -303,3 +303,7 @@ a { color: var(--accent); }
 .save-msg { color: var(--have); font-weight: 600; }
 .save-msg:empty { display: none; }
 .bookmarklet { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--accent); color: var(--accent-text); text-decoration: none; font-weight: 600; }
+/* In the Android app the Save button replaces the bookmark */
+.android-only { display: none; }
+.in-android-app .android-only { display: block; }
+.in-android-app .web-only { display: none; }
