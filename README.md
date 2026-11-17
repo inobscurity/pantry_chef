@@ -113,6 +113,10 @@ app lists how many recipes each source contributed, and says if a source couldn'
   recipes about 1 more. If the key is rejected or the allowance is used up, the other sources
   still work.
 
+**taste.com.au**: its robots.txt forbids collecting its content by automated means without the
+publisher's written permission, so the app doesn't read it. Instead, the results have a link that
+opens a Google search of taste.com.au for your main ingredient and up to three others.
+
 ## Run it
 
 It's a static site with no build step and no server.
