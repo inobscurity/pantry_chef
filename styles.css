@@ -293,6 +293,9 @@ a { color: var(--accent); }
 .courses .course .count { font-size: 12px; opacity: .8; }
 .site-links { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; padding: 0; margin: 4px 0; }
 .site-links a { font-weight: 600; }
+.site-words { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
+.site-word { font: inherit; font-size: 0.9em; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; opacity: 0.6; text-decoration: line-through; }
+.site-word.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); opacity: 1; text-decoration: none; }
 
 /* My recipes */
 .my-list { list-style: none; padding: 0; margin: 6px 0; }

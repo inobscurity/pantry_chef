@@ -426,21 +426,43 @@
     { site: 'iga.com.au/recipes', name: 'IGA' },
   ];
 
-  function tasteSearchWords() {
+  // The ingredients the site searches can use: the main one first, then the rest of your list.
+  function tasteSearchChoices() {
     const listed = state.pantry.filter((p) => !Core.coveredByBasics(state.basics, p));
-    const words = state.main ? [state.main, ...listed.filter((p) => Core.normalize(p) !== Core.normalize(state.main))] : listed;
-    return words.slice(0, 4);
+    return state.main ? [state.main, ...listed.filter((p) => Core.normalize(p) !== Core.normalize(state.main))] : listed;
+  }
+
+  // Google drops "site:" when that site has no page with every word, and shows other sites
+  // instead. So the searches use 3 words by default (the main one and the next two); tap a
+  // word to add or leave it out.
+  let siteWords = null;   // the words picked, or null for the default
+  function tasteSearchWords() {
+    const choices = tasteSearchChoices();
+    const picked = siteWords && siteWords.filter((w) => choices.includes(w));
+    return picked && picked.length ? picked : choices.slice(0, 3);
+  }
+
+  function toggleSiteWord(word) {
+    const words = tasteSearchWords();
+    const next = words.includes(word) ? words.filter((w) => w !== word) : [...words, word];
+    if (next.length) siteWords = tasteSearchChoices().filter((w) => next.includes(w));
+    renderResults();
   }
 
   function tasteSearch() {
+    const choices = tasteSearchChoices();
     const words = tasteSearchWords();
     if (!words.length) return null;
     const href = (site) => 'https://www.google.com/search?q=' + encodeURIComponent(`site:${site} ${words.join(' ')} recipe`);
     return el('div', { class: 'card notice taste' },
-      el('div', null, `More ideas for ${words.join(', ')}:`),
+      el('div', null, 'More ideas from recipe sites, searching for:'),
+      el('div', { class: 'site-words' }, choices.map((w) => el('button', {
+        type: 'button', class: 'site-word' + (words.includes(w) ? ' on' : ''),
+        'aria-pressed': String(words.includes(w)), onclick: () => toggleSiteWord(w),
+      }, w))),
       el('ul', { class: 'site-links' }, OTHER_SITES.map((s) => el('li', null,
         el('a', { href: href(s.site), target: '_blank', rel: 'noopener', class: 'taste-link' }, `Search ${s.name} ↗`)))),
-      el('div', { class: 'meta' }, 'Each opens a Google search of that site in a new tab.'));
+      el('div', { class: 'meta' }, 'Tap a word to add or remove it. If a search shows other websites, that site had nothing with all these words: try fewer.'));
   }
 
   function searchedLine(groups) {
