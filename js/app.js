@@ -354,6 +354,7 @@
     { site: 'recipetineats.com', name: 'RecipeTin Eats' },
     { site: 'tasteofhome.com', name: 'Taste of Home' },
     { site: 'bbcgoodfood.com', name: 'BBC Good Food' },
+    { site: 'jamieoliver.com', name: 'Jamie Oliver' },
   ];
 
   function tasteSearchWords() {
