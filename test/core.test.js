@@ -367,3 +367,16 @@ test('a chapter is only a clue: names and ingredients come first', () => {
   assert.equal(course('Purée Crécy', ['Carrots', 'Stock'], 'soup'), 'soup');
   assert.equal(course('Stewed Cauliflower', ['Cauliflower', 'Butter'], 'side'), 'side');
 });
+
+test('a main chapter only counts when something makes the dish a main', () => {
+  const course = (name, ingredients, hint) => Core.courseOf({ name, courseHint: hint, ingredients: ingredients.map((n) => ({ name: n })) });
+  assert.equal(course('Boiled Squash', ['Butter', 'Squash', 'Stock', 'Salt', 'Pepper', 'Sugar', 'Milk', 'Mace'], 'main'), 'side');
+  assert.equal(course('Boiled Okra', ['Okra', 'Water', 'Salt', 'Butter', 'Cream'], 'main'), 'side');
+  assert.equal(course('Woodcock à la Provençale', ['Salad oil', 'Black pepper', 'Garlic'], 'main'), 'main');
+  assert.equal(course('Spare-ribs', ['Pepper', 'Salt'], 'main'), 'main');
+  assert.equal(course('Slivered Codfish', ['Codfish', 'Butter'], 'main'), 'main');
+  assert.equal(course('Sweet Breads with Peas', ['Sweetbreads', 'Peas'], 'main'), 'main');
+  assert.equal(course('Turkey and Dressing', ['Turkey', 'Bread', 'Sage'], 'main'), 'main');
+  assert.equal(course('Oyster Dressing', ['Oysters', 'Bread'], 'main'), 'sauce');
+  assert.equal(course('Macaroni Cheese', ['Macaroni', 'Cheese', 'Milk', 'Butter'], 'main'), 'main');
+});

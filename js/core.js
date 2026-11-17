@@ -192,6 +192,11 @@
     'herring', 'trout', 'tuna', 'sardine', 'anchovy', 'eel', 'pike', 'perch', 'bream', 'snapper',
     'flounder', 'barramundi', 'flathead', 'whitebait', 'prawn', 'crab', 'lobster', 'crayfish', 'oyster',
     'mussel', 'clam', 'scallop', 'squid', 'octopus', 'calamari', 'shellfish', 'seafood', 'terrapin', 'turtle',
+    // older and less common ones, found in the classic cookbooks
+    'woodcock', 'snipe', 'plover', 'teal', 'widgeon', 'lark', 'ortolan', 'guinea', 'rib', 'sparerib', 'loin',
+    'rump', 'shank', 'brisket', 'trotter', 'brain', 'giblet', 'offal', 'ox', 'calf', 'mutton', 'codfish',
+    'catfish', 'swordfish', 'stockfish', 'shad', 'smelt', 'sprat', 'pilchard', 'roe', 'scrod', 'carp', 'tench',
+    'skate', 'mullet', 'whitefish', 'dory', 'kingfish', 'bass', 'sturgeon', 'frog', 'chitterling', 'haggis',
   ]);
   const LEAFY = new Set([
     'basil', 'mint', 'parsley', 'coriander', 'sage', 'thyme', 'bay', 'curry', 'oregano', 'tarragon',
@@ -510,12 +515,15 @@
     const name = String(recipe.name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); // consommé → consomme
     const ings = ingredientsOf(recipe).map((i) => normalize(nameOf(i))).join(' | ');
     const hasMeat = ings.split(/[ |]+/).some((w) => MEAT_AND_FISH.has(w));
-    const nameHasMeat = normalize(name).split(' ').some((w) => MEAT_AND_FISH.has(w));
+    const nameHasMeat = normalize(name.replace(/\bsweet ?breads?\b/g, 'sweetbread').replace(/\bspare[- ]?ribs?\b/g, 'sparerib'))
+      .split(' ').some((w) => MEAT_AND_FISH.has(w));
 
     if (/\bsalads?\b/.test(name)) return nameHasMeat ? 'main' : 'side';
     if (/\bpies?\b/.test(name) && !SWEET_PIE.test(name)) return 'main';            // meat and savoury pies
+    const plainName = name.replace(/\bsweet ?breads?\b/g, 'sweetbreads');            // offal, not sweet bread
     for (const [course, pattern] of NAME_COURSE) {
-      if (!pattern.test(name)) continue;
+      if (!pattern.test(plainName)) continue;
+      if (course === 'sauce' && nameHasMeat && /\b(?:and|with)\b/.test(name)) return 'main';    // turkey and dressing
       if (course === 'dessert' && /\bbread\b/.test(name) && /\bsauce\b/.test(name)) return 'sauce';
       if (course === 'dessert' && nameHasMeat) return 'main';                       // steak and kidney pudding, sausage rolls
       if (course === 'dessert' && !SWEET.test(ings)
@@ -532,6 +540,9 @@
 
     let hint = recipe.courseHint || '';
     if (hint === 'dessert' && !SWEET.test(ings)) hint = '';                            // nothing sweet in it
+    // A "main" chapter only counts if something makes the dish a main: a book's next chapter
+    // heading can be missed, and "Boiled Squash" is still a side.
+    if (hint === 'main' && !hasMeat && !(VEG_PROTEIN.test(ings) && ingredientsOf(recipe).length >= 4)) hint = '';
     if (hint) return hint;
 
     if (hasMeat || nameHasMeat || VEG_MAIN.test(name)) return 'main';
