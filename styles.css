@@ -291,3 +291,5 @@ a { color: var(--accent); }
 }
 .courses .course.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
 .courses .course .count { font-size: 12px; opacity: .8; }
+.site-links { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; padding: 0; margin: 4px 0; }
+.site-links a { font-weight: 600; }

@@ -342,9 +342,16 @@
       })));
   }
 
-  // taste.com.au forbids automated collection of its content (its robots.txt says so), so the app
-  // doesn't read it. Instead, this opens a Google search of the site in a new tab. Google expects
-  // every word to appear, so it uses your main ingredient and up to three others, not basics.
+  // Recipe sites the app doesn't read (taste.com.au's robots.txt forbids automated collection, and
+  // the others' terms are similar). Instead, links open a Google search of each site in a new tab.
+  // Google expects every word to appear, so they use your main ingredient and up to three others,
+  // not basics.
+  const OTHER_SITES = [
+    { site: 'taste.com.au', name: 'taste.com.au' },
+    { site: 'bestrecipes.com.au', name: 'Best Recipes' },
+    { site: 'allrecipes.com', name: 'Allrecipes' },
+  ];
+
   function tasteSearchWords() {
     const listed = state.pantry.filter((p) => !Core.coveredByBasics(state.basics, p));
     const words = state.main ? [state.main, ...listed.filter((p) => Core.normalize(p) !== Core.normalize(state.main))] : listed;
@@ -354,11 +361,12 @@
   function tasteSearch() {
     const words = tasteSearchWords();
     if (!words.length) return null;
-    const href = 'https://www.google.com/search?q=' + encodeURIComponent(`site:taste.com.au ${words.join(' ')} recipe`);
+    const href = (site) => 'https://www.google.com/search?q=' + encodeURIComponent(`site:${site} ${words.join(' ')} recipe`);
     return el('div', { class: 'card notice taste' },
-      el('div', null, 'More ideas: ',
-        el('a', { href, target: '_blank', rel: 'noopener', class: 'taste-link' }, `Search taste.com.au for ${words.join(', ')} ↗`)),
-      el('div', { class: 'meta' }, 'Opens a Google search of taste.com.au in a new tab.'));
+      el('div', null, `More ideas for ${words.join(', ')}:`),
+      el('ul', { class: 'site-links' }, OTHER_SITES.map((s) => el('li', null,
+        el('a', { href: href(s.site), target: '_blank', rel: 'noopener', class: 'taste-link' }, `Search ${s.name} ↗`)))),
+      el('div', { class: 'meta' }, 'Each opens a Google search of that site in a new tab.'));
   }
 
   function searchedLine(groups) {
