@@ -106,6 +106,49 @@
     $('key-msg').textContent = 'Removed. Spoonacular will no longer be searched.';
   }
 
+  // ---- my recipes (saved with the bookmark) ------------------------------------------
+
+  // The bookmark opens Pantry Chef as …#save=<recipe details>. Save it, then show it.
+  function receiveSavedRecipe() {
+    const m = location.hash.match(/^#save=(.+)$/);
+    if (!m) return;
+    let details = null;
+    try { details = JSON.parse(decodeURIComponent(m[1])); } catch (_) { details = null; }
+    const saved = details && window.MyRecipes.save(details, { parseIngredient: window.Wikibooks._internal.parseIngredient });
+    history.replaceState(null, '', location.pathname);
+    if (saved) {
+      $('save-msg').textContent = `Saved “${saved.name}” to My recipes.`;
+      location.hash = 'recipe/' + encodeURIComponent(saved.id);
+    } else {
+      $('save-msg').textContent = "That page's recipe couldn't be saved: it had no ingredient list.";
+    }
+    $('my-recipes').open = true;
+  }
+
+  function renderMyRecipes() {
+    const list = window.MyRecipes.all();
+    $('my-summary').textContent = list.length ? `${list.length} saved` : 'none saved yet';
+    $('my-list').replaceChildren(...list.map((r) => el('li', null,
+      el('a', { href: '#recipe/' + encodeURIComponent(r.id) }, r.name),
+      el('span', { class: 'meta' }, r.sourceName.replace(/^My recipes · /, ' · ')),
+      el('button', {
+        type: 'button',
+        'aria-label': `Remove ${r.name}`,
+        onclick: () => {
+          window.MyRecipes.remove(r.id);
+          renderMyRecipes();
+          if (state.searched) state.stale = true, renderResults();
+        },
+      }, '×'))));
+    const href = window.MyRecipes.bookmarkHref(location.origin + location.pathname);
+    $('bookmark-link').setAttribute('href', href);
+    $('copy-bookmark').onclick = async (e) => {
+      try { await navigator.clipboard.writeText(href); e.target.textContent = 'Copied'; }
+      catch (_) { e.target.textContent = "Couldn't copy"; }
+      setTimeout(() => { e.target.textContent = 'Copy the bookmark'; }, 1800);
+    };
+  }
+
   // ---- basics -----------------------------------------------------------------------
 
   function renderBasics() {
@@ -198,6 +241,7 @@
   function sources() {
     // Order matters for duplicates: the first source's version of a recipe is kept.
     const list = [
+      { name: 'My recipes', find: (p) => window.MyRecipes.findRecipes(p) },
       { name: 'TheMealDB', find: (p) => window.MealDB.findRecipes(p, { onProgress: setStatus }) },
       { name: 'Wikibooks Cookbook', find: (p) => window.Wikibooks.findRecipes(p) },
       { name: 'ForkRecipe', find: (p) => window.ForkRecipe.findRecipes(p) },
@@ -447,7 +491,8 @@
 
   async function openRecipe(id) {
     const token = ++openToken;
-    let recipe = state.recipes.find((r) => r.id === id) || linked.get(id);
+    let recipe = state.recipes.find((r) => r.id === id) || linked.get(id)
+      || (/^my-/.test(id) ? window.MyRecipes.all().find((r) => r.id === id) : null);
     if (!recipe && /^book-/.test(id)) {
       $('recipe-view').replaceChildren(backButton(), el('div', { class: 'card panel loading' }, 'Loading…'));
       try { recipe = await window.Books.recipeById(id); } catch (_) { recipe = null; }
@@ -581,7 +626,7 @@
 
   function route() {
     const m = location.hash.match(/^#recipe\/(.+)$/);
-    const showRecipe = !!m && (state.recipes.length > 0 || /^#recipe\/book-/.test(location.hash));
+    const showRecipe = !!m && (state.recipes.length > 0 || /^#recipe\/(?:book|my)-/.test(location.hash));
     $('search-view').hidden = showRecipe;
     $('recipe-view').hidden = !showRecipe;
     if (showRecipe) {
@@ -639,5 +684,7 @@
   renderSources();
   renderBasics();
   renderPantry();
+  receiveSavedRecipe();
+  renderMyRecipes();
   route();
 })();

@@ -118,6 +118,13 @@ content by automated means without the publisher's written permission, and the o
 similar, so the app doesn't read them. Instead, the results have links that open a Google search of
 each site for your main ingredient and up to three others.
 
+**My recipes**: save a recipe from any recipe website with the **Save to Pantry Chef** bookmark.
+On a recipe page, tap the bookmark: it reads that one page's recipe details (the schema.org
+"Recipe" data sites publish for search engines) and opens Pantry Chef, which keeps the recipe in
+your browser. Saved recipes join your searches like any other source, follow all the rules, and link
+back to the site. Set up the bookmark, and see or remove saved recipes, under **My recipes** in the
+app. Nothing is collected automatically: one page, when you tap the bookmark.
+
 ## Run it
 
 It's a static site with no build step and no server.
@@ -137,6 +144,7 @@ It's a static site with no build step and no server.
 | `js/mealdb.js`, `js/wikibooks.js`, `js/forkrecipe.js`, `js/spoonacular.js` | One file per recipe source. |
 | `js/app.js` | The two screens: search with grouped results, and the recipe. |
 | `data/` | The bundled ForkRecipe data and its licence, and `data/books/` (classic cookbooks). |
+| `js/myrecipes.js` | My recipes, and the Save to Pantry Chef bookmark's code. |
 | `js/books.js` | Searches the classic cookbooks on the device; loads a book's methods when a recipe is opened. |
 | `scripts/` | Rebuild the bundled data: `build_forkrecipe.py`, and `build_books.py` with `fix_long_s.py` and `ingredients.txt` for the cookbooks. |
 | `test/` | Tests, with the online services faked: `node --test test/*.test.js`, and for the cookbook reader `python3 -m unittest discover -s test -p 'test_*.py'` |
