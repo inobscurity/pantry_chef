@@ -22,7 +22,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      # GitHub's Ubuntu machines come with the Android SDK installed (ANDROID_HOME).
 
       - name: Build
         working-directory: android
