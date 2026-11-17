@@ -352,6 +352,7 @@
     { site: 'allrecipes.com', name: 'Allrecipes' },
     { site: 'delicious.com.au', name: 'delicious.' },
     { site: 'recipetineats.com', name: 'RecipeTin Eats' },
+    { site: 'tasteofhome.com', name: 'Taste of Home' },
   ];
 
   function tasteSearchWords() {
