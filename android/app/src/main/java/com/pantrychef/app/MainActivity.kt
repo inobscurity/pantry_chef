@@ -6,10 +6,12 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Message
 import android.view.Gravity
 import android.view.View
+import android.view.WindowInsets
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.webkit.JavascriptInterface
@@ -125,6 +127,21 @@ class MainActivity : Activity() {
         val root = FrameLayout(this)
         root.addView(app, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         root.addView(browserPanel, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        // Android 15 and later draw apps edge to edge, under the status bar and the navigation
+        // buttons. Keep the app clear of them, so the title bar and Save button can be tapped.
+        root.setBackgroundColor(ACCENT)
+        root.setOnApplyWindowInsetsListener { view, insets ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+                val keyboard = insets.getInsets(WindowInsets.Type.ime())
+                view.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, keyboard.bottom))
+            } else {
+                @Suppress("DEPRECATION")
+                view.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop,
+                    insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
+            }
+            insets
+        }
         setContentView(root)
 
         if (savedInstanceState != null) app.restoreState(savedInstanceState) else app.loadUrl(APP_URL)
