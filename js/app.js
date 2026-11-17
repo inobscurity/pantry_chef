@@ -365,8 +365,11 @@
     return el('div', { class: 'card notice taste' },
       el('div', null, `More ideas for ${words.join(', ')}:`),
       el('ul', { class: 'site-links' }, OTHER_SITES.map((s) => el('li', null,
-        el('a', { href: href(s.site), target: '_blank', rel: 'noopener', class: 'taste-link' }, `Search ${s.name} ↗`)))),
-      el('div', { class: 'meta' }, 'Each opens a Google search of that site in a new tab.'));
+        el('a', { href: href(s.site), target: '_blank', rel: 'noopener', class: 'taste-link' }, `Search ${s.name} ↗`))),
+        // Supercook finds recipes by ingredient itself; its address doesn't take ingredients that we
+        // know of, so this opens its home page.
+        el('li', null, el('a', { href: 'https://www.supercook.com', target: '_blank', rel: 'noopener', class: 'taste-link supercook' }, 'Open Supercook ↗'))),
+      el('div', { class: 'meta' }, 'Each site link opens a Google search of that site in a new tab. Supercook opens its own page, where you add your ingredients.'));
   }
 
   function searchedLine(groups) {

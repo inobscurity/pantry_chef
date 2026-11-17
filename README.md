@@ -116,7 +116,9 @@ app lists how many recipes each source contributed, and says if a source couldn'
 **taste.com.au, Best Recipes and Allrecipes**: taste.com.au's robots.txt forbids collecting its
 content by automated means without the publisher's written permission, and the others' terms are
 similar, so the app doesn't read them. Instead, the results have links that open a Google search of
-each site for your main ingredient and up to three others.
+each site for your main ingredient and up to three others. There's also a link that opens
+[Supercook](https://www.supercook.com), an ingredient-based recipe search, where you add your
+ingredients yourself.
 
 ## Run it
 
