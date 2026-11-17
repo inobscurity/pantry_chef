@@ -71,7 +71,7 @@
   // ---- ingredient lines -------------------------------------------------------------
 
   const NUMBER = String.raw`(?:\d+(?:[.,]\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+|[¼½¾⅓⅔⅛]|a|an|one|two|three|four|five|six|seven|eight|nine|ten|twelve|half)`;
-  const UNIT = String.raw`(?:cups?|c\.|tablespoons?|tbsps?|tbs|tbsp|teaspoons?|tsps?|tsp|grams?|g|kilograms?|kg|millilit(?:re|er)s?|ml|lit(?:re|er)s?|l|pounds?|lbs?|ounces?|oz|fl\.?\s*oz|pinch(?:es)?|dash(?:es)?|cloves?|cans?|tins?|jars?|packets?|packages?|pkgs?|sticks?|slices?|bunch(?:es)?|handfuls?|sprigs?|pieces?|heads?|stalks?|sheets?|knobs?|drops?|quarts?|pints?|gallons?)`;
+  const UNIT = String.raw`(?:cups?|c\.|tablespoons?|tbsps?|tbs|tbsp|teaspoons?|tsps?|tsp|grams?|gms?|g|kilograms?|kg|millilit(?:re|er)s?|ml|lit(?:re|er)s?|l|pounds?|lbs?|ounces?|oz|fl\.?\s*oz|pinch(?:es)?|dash(?:es)?|cloves?|cans?|tins?|jars?|packets?|packages?|pkgs?|sticks?|slices?|bunch(?:es)?|handfuls?|sprigs?|pieces?|heads?|stalks?|sheets?|knobs?|drops?|quarts?|pints?|gallons?)`;
   const QUANTITY = new RegExp(
     String.raw`^(?:(?:about|approx\.?|approximately|around)\s+)?(${NUMBER}(?:\s*(?:-|–|to)\s*${NUMBER})?(?:\s*${UNIT}\b\.?)?)\s+(?:of\s+)?(.+)$`, 'i');
 
@@ -80,11 +80,26 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
+  // "(peeled (brown or white))" → "(peeled, brown or white)": brackets inside brackets become commas.
+  function flattenBrackets(text) {
+    let depth = 0;
+    let out = '';
+    for (const ch of text) {
+      if (ch === '(') { out += depth++ ? ', ' : '('; continue; }
+      if (ch === ')') { if (depth > 0 && --depth === 0) out += ')'; continue; }
+      out += ch;
+    }
+    if (depth > 0) out += ')';
+    return out.replace(/\(\s*,\s*/g, '(').replace(/,\s*,/g, ',').replace(/\s+,/g, ',');
+  }
+
   /* "2 cups plain flour, sifted" → { name: "Plain flour, sifted", measure: "2 cups" } */
   function parseIngredient(line) {
     let text = clean(line).replace(/^[-–•]\s*/, '');
     for (const [k, v] of Object.entries(FRACTIONS)) text = text.split(k).join(' ' + v).replace(/^\s+/, '');
     text = text.replace(/(\d)\s+(?=\d\/)/g, '$1 ').replace(/(\d)([a-zA-Z])/, '$1 $2'); // "500g" → "500 g"
+    // Tidy notes that recipe plugins leave behind: "onion (, peeled (brown or white))".
+    text = flattenBrackets(text).replace(/\(\s*[,;]\s*/g, '(').replace(/\s*[,;]\s*\)/g, ')').replace(/\(\s*\)/g, '');
     let measure = '';
     let name = text;
     const m = text.match(QUANTITY);
@@ -92,6 +107,9 @@
     // "2 cans (28 oz) broth": the bracket belongs to the quantity.
     const size = measure && name.match(/^(\([^)]*\))\s*(.+)$/);
     if (size) { measure += ' ' + size[1]; name = size[2]; }
+    // "1.5 kg / 3 lb pumpkin": keep the first measure, drop the conversion.
+    if (measure) name = name.replace(new RegExp(String.raw`^\/\s*${NUMBER}(?:\s*${UNIT}\b\.?)?\s+`, 'i'), '');
+    measure = measure.replace(/^(\d+)\.(\d*?)0+\b/, (_, a, b) => (b ? `${a}.${b}` : a)).replace(/\bgms?\b/i, 'g');
     const toTaste = /,?\s*\b(to taste|as needed|as required)\b\.?\s*$/i;
     if (toTaste.test(name)) {
       measure = measure || name.match(toTaste)[1].toLowerCase();

@@ -17,6 +17,8 @@
     'into', 'piece', 'about', 'plus', 'for', 'serving', 'garnish', 'needed', 'optional',
     'room', 'temperature', 'packed', 'heaped', 'level', 'good', 'quality', 'cubed', 'frying',
     'deep', 'shallow', 'greasing', 'drizzling', 'nonfat', 'lowfat', 'sodium',
+    'unpeeled', 'smashed', 'bruised', 'halved', 'quartered', 'trimmed', 'drained', 'rinsed',
+    'coarsely', 'lightly', 'deseeded', 'seeded', 'sifted', 'shredded', 'torn', 'scrubbed',
     'of', 'and', 'or', 'to', 'taste', 'a', 'an', 'the', 'some',
   ]);
 
@@ -99,6 +101,7 @@
     'vinegar', 'flour', 'milk', 'cream', 'butter', 'syrup', 'ketchup', 'jam',
     'seed', 'pepita', 'spice', 'flake', 'pie', 'sour', 'coconut', 'almond', 'oat',
     'soy', 'condensed', 'evaporated', 'powdered', 'icing', 'liqueur', 'wine', 'spring',
+    'bread', 'toast',   // garlic bread isn't garlic
   ]);
 
   const IRREGULAR = { leaves: 'leaf', loaves: 'loaf', halves: 'half', calves: 'calf', knives: 'knife', sheaves: 'sheaf' };
@@ -242,7 +245,7 @@
     const b = tokens(basic);
     if (!b.length) return false;
     return alternatives(needed).some((alt) => {
-      const t = tokens(alt);
+      const t = tokens(shortName(alt));
       return b.every((w) => t.includes(w)) && t.every((w) => b.includes(w) || BASIC_MODIFIERS.has(w));
     });
   }
@@ -283,7 +286,8 @@
     return nameOfNow(`${ing.name || ''}\u0000${ing.measure || ''}`);
   }
 
-  const OPTIONAL = /\boptional\b|\bto serve\b|\bfor serving\b|\bto garnish\b|\bfor garnish\b|\bgarnish\b/i;
+  // Garnishes and things served alongside: "cream for drizzling", "garlic bread for dunking".
+  const OPTIONAL = new RegExp(String.raw`\boptional\b|\b(?:to|for)\s+(?:serve|serving|garnish(?:ing)?|drizzl(?:e|ing)|dunk(?:ing)?|dip(?:ping)?|sprinkl(?:e|ing)|scatter(?:ing)?|decorat(?:e|ing|ion)|top(?:ping)?|finish(?:ing)?|accompany|the table)\b|\bgarnish\b|\bon the side\b`, 'i');
   function isOptional(ing) {
     return ing.optional === true || OPTIONAL.test(ing.name || '') || OPTIONAL.test(ing.measure || '');
   }

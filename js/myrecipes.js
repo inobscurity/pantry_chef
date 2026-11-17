@@ -131,6 +131,20 @@
     store(load(storage).filter((r) => r.id !== id), storage);
   }
 
+  // A recipe site's list often ends with a garnish section ("Cream for drizzling", "Finely
+  // chopped parsley", "Garlic bread for dunking"), but the heading is lost. Lines at the end
+  // with no amount, in a run that includes a garnish or "to serve" line, are taken as garnish.
+  function markGarnish(ingredients) {
+    const out = ingredients.map((ing) => Object.assign({}, ing));
+    let start = out.length;
+    while (start > 0 && !String(out[start - 1].measure || '').trim()) start--;
+    const tail = out.slice(start);
+    if (tail.length && tail.length < out.length && tail.some((ing) => Core.isOptional(ing))) {
+      tail.forEach((ing) => { ing.optional = true; });
+    }
+    return out;
+  }
+
   function toRecipe(r) {
     return {
       id: r.id,
@@ -149,7 +163,7 @@
       youtube: '',
       credit: r.site ? { text: `Saved by you from ${r.site}.`, licence: 'for your own use', licenceUrl: '' } : null,
       steps: r.steps,
-      ingredients: r.ingredients,
+      ingredients: markGarnish(r.ingredients),
       complete: true,
     };
   }
@@ -163,7 +177,7 @@
     return all(storage).filter((r) => r.ingredients.some((ing) => mains.some((m) => Core.ingredientMatches(m, ing.name))));
   }
 
-  const api = { bookmarkHref, extractorCode, save, remove, all, findRecipes, _internal: { extract, duration, load } };
+  const api = { bookmarkHref, extractorCode, save, remove, all, findRecipes, _internal: { extract, duration, load, markGarnish } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MyRecipes = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -72,3 +72,18 @@ test('the Android app gets reader code that returns the recipe as JSON text', ()
   assert.doesNotThrow(() => new Function('return ' + code));
   assert.match(code, /JSON\.stringify\(d\)/);
 });
+
+test('garnish lines at the end of a saved recipe are optional, and garlic cloves are garlic', () => {
+
+  const lines = ['1.5 kg / 3 lb butternut pumpkin ((US: butternut squash), cut in half, skin on)',
+    '1 onion (, peeled (brown, yellow or white))', '5 garlic cloves, unpeeled', '2.50 gm ground cinnamon',
+    'Cream for drizzling', 'Finely chopped parsley', 'Garlic bread for dunking'];
+  const ings = My._internal.markGarnish(lines.map(Wiki._internal.parseIngredient));
+  assert.equal(ings[0].name, 'Butternut pumpkin (US: butternut squash, cut in half, skin on)');
+  assert.equal(ings[0].measure, '1.5 kg');
+  assert.equal(ings[1].name, 'Onion (peeled, brown, yellow or white)');
+  assert.deepEqual(ings[3], { name: 'Ground cinnamon', measure: '2.5 g' });
+  const status = Core.classifyIngredients({ ingredients: ings }, ['pumpkin', 'onion'], ['garlic', 'salt']).map((i) => i.status);
+  assert.deepEqual(status, ['have', 'have', 'staple', 'need', 'optional', 'optional', 'optional']);
+  assert.equal(Core.ingredientMatches('garlic', 'Garlic bread'), false);
+});
