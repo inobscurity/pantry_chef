@@ -76,11 +76,12 @@
     return [...new Set(loadable.flat())];
   }
 
-  function hash(s) {
+  function hashNumber(s) {
     let h = 5381;
     for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
-    return h.toString(36);
+    return h;
   }
+  const hash = (s) => hashNumber(s).toString(36);
 
   function capitalise(s) {
     return s.charAt(0).toUpperCase() + s.slice(1);
@@ -110,16 +111,69 @@
       source: url,
       sourceLabel: `Open on ${site} ↗`,
       youtube: '',
-      credit: null,
+      credit: {
+        text: `Recipe from ${site}, which owns it; kept here for personal use.`,
+        licence: 'all rights reserved by the site',
+        licenceUrl: '',
+      },
       methodOn: site,
+      detailFiles: index.detailFiles || 0,
       steps: [],
       ingredients: keys.map((key) => {
         const optional = key < 0;
         const word = words[optional ? -key - 1 : key];
         return { name: capitalise(word), match: word, measure: '', optional };
       }),
-      complete: true,
+      complete: !index.detailFiles,
+      completeWith: 'web',
     };
+  }
+
+  // "PT1H30M" → "1 hr 30 min"
+  function duration(iso) {
+    const m = String(iso || '').match(/^P(?:\d+D)?T?(?:(\d+)H)?(?:(\d+)M)?/i);
+    if (!m || (!m[1] && !m[2])) return /^P/i.test(String(iso || '')) ? '' : String(iso || '').slice(0, 30);
+    return [m[1] ? `${Number(m[1])} hr` : '', m[2] ? `${Number(m[2])} min` : ''].filter(Boolean).join(' ');
+  }
+
+  const detailLoading = new Map();
+
+  /*
+   * Adds the amounts, method, time, serves and author when a recipe is opened, from
+   * data/web/d/. Each ingredient line keeps the name the search matched it by, so the recipe
+   * screen agrees with the card.
+   */
+  async function completeRecipe(recipe, { fetchImpl } = {}) {
+    if (recipe.complete || !recipe.detailFiles) return Object.assign({}, recipe, { complete: true });
+    const h = hashNumber(recipe.source);
+    const n = h % recipe.detailFiles;
+    if (!detailLoading.has(n)) {
+      detailLoading.set(n, getJSON(`${BASE}d/${n}.json${version()}`, fetchImpl).catch((e) => { detailLoading.delete(n); throw e; }));
+    }
+    const entries = await detailLoading.get(n);
+    const entry = entries[h.toString(36)];
+    if (!entry) return Object.assign({}, recipe, { complete: true });
+    const [lines, steps, time, serves, author] = entry;
+    const site = recipe.sourceName;
+    return Object.assign({}, recipe, {
+      ingredients: lines.length
+        ? lines.map(([name, measure, at]) => {
+          const searched = at >= 0 ? recipe.ingredients[at] : null;
+          return searched
+            ? { name, measure, match: searched.match, optional: searched.optional || undefined }
+            : { name, measure };
+        })
+        : recipe.ingredients,
+      steps,
+      methodOn: steps.length ? '' : recipe.methodOn,
+      category: duration(time) ? `Takes ${duration(time)}` : '',
+      tags: serves ? [`Serves ${serves.replace(/^serves\s*/i, '')}`] : [],
+      area: author || '',
+      credit: Object.assign({}, recipe.credit, {
+        text: `Recipe from ${site}${author ? `, by ${author}` : ''}, who own it; kept here for personal use.`,
+      }),
+      complete: true,
+    });
   }
 
   /*
@@ -180,7 +234,7 @@
     return shortlist.slice(0, MAX_CANDIDATES).map((s) => toRecipe(index, s.words, s.row));
   }
 
-  const api = { findRecipes, _internal: { shardsToLoad, tokensFor, hash, reset: () => { indexLoading = null; shardLoading.clear(); } } };
+  const api = { findRecipes, completeRecipe, _internal: { shardsToLoad, tokensFor, hash, reset: () => { indexLoading = null; shardLoading.clear(); detailLoading.clear(); } } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.WebRecipes = api;
 })(typeof self !== 'undefined' ? self : this);

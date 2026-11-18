@@ -547,9 +547,9 @@
     $('recipe-view').replaceChildren(backButton(),
       el('div', { class: 'card panel loading' }, `Loading ${recipe.name}…`));
     try {
-      const full = recipe.completeWith === 'books'
-        ? await window.Books.completeRecipe(recipe)
-        : await window.Spoonacular.completeRecipe(recipe, state.spoonKey);
+      const full = recipe.completeWith === 'books' ? await window.Books.completeRecipe(recipe)
+        : recipe.completeWith === 'web' ? await window.WebRecipes.completeRecipe(recipe)
+          : await window.Spoonacular.completeRecipe(recipe, state.spoonKey);
       const i = state.recipes.findIndex((r) => r.id === id);
       if (i >= 0) {
         state.recipes[i] = full;

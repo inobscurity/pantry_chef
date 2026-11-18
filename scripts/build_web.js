@@ -7,9 +7,13 @@
  *
  *   node scripts/build_web.js <folder with part_*.json> [--max N]
  *
- * Keeps each recipe's name, address, course and what its ingredients are (matched the same way
- * the app matches them), never the method. Recipes are written into one file per ingredient
- * word, so the app downloads only the files for your ingredients.
+ * Two kinds of file:
+ *   s/<word>.json  for searching: each recipe's name, address, course and what its ingredients
+ *                  are (matched the same way the app matches them), one file per ingredient word,
+ *                  so the app downloads only the files for your ingredients;
+ *   d/<n>.json     for reading: the ingredient lines with amounts, the method, time, serves and
+ *                  author, fetched when a recipe is opened. Kept for personal use, with credit and
+ *                  a link to the original on every recipe.
  */
 'use strict';
 
@@ -117,6 +121,25 @@ function ingredientKey(line) {
 
 const COURSE_CODES = { main: 'm', side: 's', soup: 'p', starter: 't', sauce: 'x', dessert: 'd', other: 'o' };
 
+// The method as steps: "Step 1" labels and headings ("Make the Gravy:") dropped, a wall of text
+// split up the way the app splits other recipes' methods.
+function methodSteps(raw) {
+  const text = (raw || []).filter((x) => typeof x === 'string' && !x.startsWith('§'))
+    .map((x) => x.split('\n').map(decode).join('\n')).join('\n');
+  return Core.splitSteps(text)
+    .filter((step) => !(step.length < 60 && /:$/.test(step)) && !/^step\s*\d+[.:]?$/i.test(step))
+    .map((step) => (step.length > 1500 ? step.slice(0, 1500).replace(/\s+\S*$/, '') + '…' : step))
+    .slice(0, 30);
+}
+
+// The same as js/web.js: which details file a recipe's address is in.
+const DETAIL_FILES = 1024;
+function hash(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
 function region(host) {
   if (/\.(?:au|nz)$/.test(host)) return 0;
   if (/\.(?:uk|ie)$/.test(host)) return 1;
@@ -147,22 +170,32 @@ function main(argv) {
       if (name.length < 3 || name.length > 120) continue;
       const nameKey = host.replace(/^www\./, '') + '|' + Core.normalize(name);
       if (byName.has(nameKey)) continue;
-      const seen = new Set();
+      const seen = new Map();
       const ingredients = [];
+      const lines = [];   // [name, amount, which of `ingredients` it is (-1: a basic, not searched)]
       for (const line of r.i || []) {
+        const text = decode(line);
+        const parsed = text && text.length <= 200 && Wiki._internal.parseIngredient(text.replace(/[®™©]/g, ''));
+        if (!parsed) continue;
         const k = ingredientKey(line);
-        if (!k || seen.has(k.key)) continue;
+        let at = -1;
         // Salt, pepper, oil and water are everyone's basics: leaving them out saves a lot of room.
-        if (Core.coveredByBasics(Core.DEFAULT_BASICS, k.key) || k.key.split(/\s+/).every((w) => SEASONING_WORDS.has(w))) continue;
-        seen.add(k.key);
-        ingredients.push(k);
+        if (k && !(Core.coveredByBasics(Core.DEFAULT_BASICS, k.key) || k.key.split(/\s+/).every((w) => SEASONING_WORDS.has(w)))) {
+          if (!seen.has(k.key)) { seen.set(k.key, ingredients.length); ingredients.push(k); }
+          at = seen.get(k.key);
+        }
+        lines.push([parsed.name.slice(0, 120), parsed.measure.slice(0, 40), at]);
       }
       if (ingredients.length < 2 || ingredients.length > 40) continue;
       const courseHint = Core.courseFromLabel((r.c || []).map(decode).join(', '));
       const course = Core.courseOf({ name, courseHint, ingredients: ingredients.map((i) => ({ name: i.key, optional: i.optional })) });
       if (!KEEP_COURSES.has(course)) continue;
       byName.add(nameKey);
-      byUrl.set(address, { host: url.hostname, path: url.pathname + (url.search.length < 40 ? url.search : ''), name, ingredients, course: COURSE_CODES[course] || '' });
+      byUrl.set(address, {
+        host: url.hostname, path: url.pathname + (url.search.length < 40 ? url.search : ''), name, ingredients,
+        course: COURSE_CODES[course] || '',
+        details: [lines.slice(0, 50), methodSteps(r.s), decode(r.t).slice(0, 30), decode(r.y).slice(0, 40), decode(r.a).slice(0, 80)],
+      });
     }
   }
   let recipes = [...byUrl.values()];
@@ -218,8 +251,24 @@ function main(argv) {
     bytes += text.length;
     fs.writeFileSync(path.join(OUT, 's', t + '.json'), text);
   }
+  // The details, by address.
+  fs.mkdirSync(path.join(OUT, 'd'), { recursive: true });
+  const detailFiles = new Map();
+  for (const r of recipes) {
+    const h = hash('https://' + r.host + prefixOf.get(r.host) + r.path);
+    const n = h % DETAIL_FILES;
+    if (!detailFiles.has(n)) detailFiles.set(n, {});
+    detailFiles.get(n)[h.toString(36)] = r.details;
+  }
+  let detailBytes = 0;
+  for (const [n, entries] of detailFiles) {
+    const text = JSON.stringify(entries);
+    detailBytes += text.length;
+    fs.writeFileSync(path.join(OUT, 'd', n + '.json'), text);
+  }
+  console.log(`details: ${detailFiles.size} files, ${(detailBytes / 1e6).toFixed(1)} MB, ${recipes.filter((r) => r.details[1].length).length} recipes with a method`);
   const built = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({ built, count: recipes.length, sites: sites.map((s, i) => (prefixes[i] ? [s, prefixes[i]] : s)), shards }));
+  fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({ built, count: recipes.length, detailFiles: DETAIL_FILES, sites: sites.map((s, i) => (prefixes[i] ? [s, prefixes[i]] : s)), shards }));
   const big = Object.entries(shards).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([t, n]) => `${t} ${n}`).join(', ');
   const rows = Object.values(shards).reduce((a, b) => a + b, 0);
   console.log(`${Object.keys(shards).length} files, ${(bytes / 1e6).toFixed(1)} MB, ${(rows / recipes.length).toFixed(1)} files per recipe. Biggest: ${big}`);

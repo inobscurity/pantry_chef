@@ -44,3 +44,29 @@ test('website recipes: a main ingredient without its own file is found through t
   assert.deepEqual(Web._internal.shardsToLoad(['onion', 'pork', 'rice'], shards, '').sort(), ['pork', 'rice']);
   assert.deepEqual(Web._internal.shardsToLoad(['pork', 'rice'], shards, ''), ['pork']);
 });
+
+test('website recipes: opening one adds amounts, method and credit from its details file', async () => {
+  const url = 'https://www.example.com.au/gpr';
+  let h = 5381;
+  for (let i = 0; i < url.length; i++) h = ((h * 33) ^ url.charCodeAt(i)) >>> 0;
+  const detail = { [h.toString(36)]: [[['Pork mince', '500 g', 0], ['Ginger, grated', '2 cm', 1], ['Rice', '1 cup', 2], ['Salt', '', -1]],
+    ['Fry the pork.', 'Add ginger and rice.'], 'PT30M', '4', 'Jo Cook'] };
+  const fetchDetail = async (p) => {
+    if (/\/d\//.test(p)) return { ok: true, json: async () => detail };
+    return fetchImpl(p);
+  };
+  Web._internal.reset();
+  index.detailFiles = 16;
+  try {
+    const found = await Web.findRecipes(['pork'], { fetchImpl: fetchDetail, pantry: ['pork', 'ginger', 'rice'], basics: ['salt'], main: 'pork' });
+    const gpr = found.find((r) => r.name === 'Ginger Pork Rice');
+    assert.equal(gpr.complete, false);
+    const full = await Web.completeRecipe(gpr, { fetchImpl: fetchDetail });
+    assert.deepEqual(full.steps, ['Fry the pork.', 'Add ginger and rice.']);
+    assert.equal(full.ingredients[0].measure, '500 g');
+    assert.equal(full.ingredients[0].match, 'pork mince');
+    assert.equal(full.category, 'Takes 30 min');
+    assert.match(full.credit.text, /example\.com\.au, by Jo Cook/);
+    assert.equal(full.methodOn, '');
+  } finally { delete index.detailFiles; }
+});
