@@ -167,7 +167,10 @@ function main(argv) {
       const address = url.hostname + url.pathname;
       if (byUrl.has(address)) continue;
       const name = cleanName(r.n);
-      if (name.length < 3 || name.length > 120) continue;
+      if (name.length < 3 || name.length > 120 || /[^\u0000-\u024f\u2000-\u206f\u2100-\u214f]/.test(name)) continue;
+      // English only: Dutch or Norwegian recipes can pass the ingredient check ("olive oil", "salt").
+      const method = methodSteps(r.s);
+      if (method.length && (method.join(' ').match(/\b(?:the|and|with|until|into|minutes|add|heat|stir|of)\b/gi) || []).length < 3) continue;
       const nameKey = host.replace(/^www\./, '') + '|' + Core.normalize(name);
       if (byName.has(nameKey)) continue;
       const seen = new Map();
@@ -194,7 +197,7 @@ function main(argv) {
       byUrl.set(address, {
         host: url.hostname, path: url.pathname + (url.search.length < 40 ? url.search : ''), name, ingredients,
         course: COURSE_CODES[course] || '',
-        details: [lines.slice(0, 50), methodSteps(r.s), decode(r.t).slice(0, 30), decode(r.y).slice(0, 40), decode(r.a).slice(0, 80)],
+        details: [lines.slice(0, 50), method, decode(r.t).slice(0, 30), decode(r.y).slice(0, 40), decode(r.a).slice(0, 80)],
       });
     }
   }
