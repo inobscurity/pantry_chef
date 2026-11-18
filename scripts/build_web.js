@@ -77,12 +77,21 @@ const LEFTOVER = new Set(['size', 'sized', 'info', 'oz', 'ounce', 'lb', 'pound',
   'tbsp', 'tsp', 'tablespoon', 'teaspoon', 'can', 'tin', 'packet', 'pkg', 'package', 'bunch', 'handful', 'inch', 'cm',
   'x', 'small', 'medium', 'big', 'extra', 'approx', 'approximately', 'heaping', 'scant', 'generous', 'cupful']);
 
+// Where a preparation note starts when there's no comma: "green beans ends removed".
+const PREP_TAIL = new Set(['removed', 'washed', 'thoroughly', 'scrambled', 'end', 'trimmed', 'divided', 'separated',
+  'squeezed', 'drained', 'rinsed', 'soaked', 'thawed', 'defrosted', 'cubed', 'julienned', 'halved', 'quartered',
+  'deveined', 'shelled', 'pitted', 'cored', 'deseeded', 'seeded', 'zested', 'juiced', 'cleaned', 'patted',
+  'at', 'cut', 'sliced', 'diced', 'minced', 'grated', 'chopped', 'shredded', 'crushed', 'mashed', 'beaten',
+  'softened', 'melted', 'warmed', 'toasted', 'blanched', 'steamed', 'boiled', 'cooled', 'chilled', 'leftover',
+  'homemade', 'store', 'bought', 'such', 'like', 'eg', 'plus', 'more', 'extra', 'reserved', 'about']);
+
 // "Salt and pepper to season", "pinch salt pepper": only seasoning words.
 const SEASONING_WORDS = new Set(['salt', 'pepper', 'sea', 'black', 'white', 'kosher', 'season', 'seasoning', 'seasoned',
   'each', 'pinch', 'with', 'oil', 'water', 'and', 'or', 'to', 'for', 'dash', 'freshly', 'cracked', 'ground']);
 
 function ingredientKey(line) {
-  const text = decode(line).replace(/[®™©]/g, '');
+  const text = decode(line).replace(/[®™©]/g, '')
+    .replace(/\b(?:home-?made|store-?bought|shop-?bought|bought)(?:\s*(?:or|\/)\s*(?:home-?made|store-?bought|shop-?bought|bought))?\s+/gi, '');
   if (!text || text.length > 200 || /:$/.test(text) || /^for the\b/i.test(text)) return null;
   const parsed = Wiki._internal.parseIngredient(text);
   if (!parsed) return null;
@@ -93,7 +102,12 @@ function ingredientKey(line) {
   // Alternatives stay alternatives: "lemon or lime juice".
   // "Salt and pepper" stays two things, so your basics cover it.
   const simplify = (alt) => alt.split(/\s+(?:and|&)\s+/)
-    .map((part) => Core.tokens(part).filter((w, i, all) => !(LEFTOVER.has(w) && i < all.length - 1)).slice(-4).join(' '))
+    .map((part) => {
+      let t = Core.tokens(part).filter((w, i, all) => !(LEFTOVER.has(w) && i < all.length - 1));
+      const cut = t.findIndex((w, i) => i > 0 && PREP_TAIL.has(w));   // "leek washed thoroughly"
+      if (cut > 0) t = t.slice(0, cut);
+      return t.slice(-4).join(' ');
+    })
     .filter(Boolean).join(' and ');
   key = [...new Set(Core.alternatives(key).map(simplify).filter(Boolean))].slice(0, 2).join(' or ');
   if (!/[a-z]{2}/.test(key)) return null;

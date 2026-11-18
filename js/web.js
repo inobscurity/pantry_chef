@@ -16,7 +16,7 @@
   const Core = root.RecipeCore || (typeof require !== 'undefined' ? require('./core.js') : null);
   const BASE = 'data/web/';
   const MAX_MISSING = 5;        // shortlist recipes needing up to this many things (the app shows up to 3)
-  const MAX_CANDIDATES = 4000;  // safety limit on the shortlist
+  const MAX_CANDIDATES = 2500;  // safety limit on the shortlist
 
   let indexLoading = null;
   const shardLoading = new Map();
@@ -136,13 +136,31 @@
     const myBasics = basics || [];
     const seen = new Set();
     const shortlist = [];
+    // Names that share no word with anything you have can't match it: skip the slow check.
+    const wordsOf = (list) => new Set(list.flatMap((n) => [n, ...Core.alsoCovers(n)]).flatMap((n) => Core.tokens(n)));
+    const mainWords = wordsOf(mains);
+    const allWords = wordsOf(all.concat(myBasics));
+    const checked = new Map();   // name → [is a main, is covered]; names repeat across files
+    const check = (w) => {
+      let v = checked.get(w);
+      if (!v) {
+        const t = Core.tokens(w);
+        const main = t.some((x) => mainWords.has(x)) && mains.some((m) => Core.ingredientMatches(m, w));
+        const cov = t.some((x) => allWords.has(x))
+          && (all.some((p) => Core.ingredientMatches(p, w)) || Core.coveredByBasics(myBasics, w));
+        v = [main, cov];
+        checked.set(w, v);
+      }
+      return v;
+    };
     for (const file of files) {
       // Each file has its own list of ingredient names; check each name once.
       const isMain = new Uint8Array(file.w.length);
       const covered = new Uint8Array(file.w.length);
       file.w.forEach((w, i) => {
-        if (mains.some((m) => Core.ingredientMatches(m, w))) isMain[i] = 1;
-        if (all.some((p) => Core.ingredientMatches(p, w)) || Core.coveredByBasics(myBasics, w)) covered[i] = 1;
+        const [main, cov] = check(w);
+        if (main) isMain[i] = 1;
+        if (cov) covered[i] = 1;
       });
       for (const row of file.r) {
         const key = row[1] + row[2];
