@@ -133,7 +133,7 @@
   function duration(iso) {
     const m = String(iso || '').match(/^P(?:\d+D)?T?(?:(\d+)H)?(?:(\d+)M)?/i);
     if (!m || (!m[1] && !m[2])) return /^P/i.test(String(iso || '')) ? '' : String(iso || '').slice(0, 30);
-    return [m[1] ? `${Number(m[1])} hr` : '', m[2] ? `${Number(m[2])} min` : ''].filter(Boolean).join(' ');
+    return [Number(m[1]) ? `${Number(m[1])} hr` : '', Number(m[2]) ? `${Number(m[2])} min` : ''].filter(Boolean).join(' ');
   }
 
   const detailLoading = new Map();
