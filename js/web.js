@@ -112,8 +112,8 @@
       sourceLabel: `Open on ${site} ↗`,
       youtube: '',
       credit: {
-        text: `Recipe from ${site}, which owns it; kept here for personal use.`,
-        licence: 'all rights reserved by the site',
+        text: `Recipe from ${site}. Ingredients listed here; the method is on the site.`,
+        licence: 'the recipe belongs to its site',
         licenceUrl: '',
       },
       methodOn: site,
@@ -153,7 +153,7 @@
     const entries = await detailLoading.get(n);
     const entry = entries[h.toString(36)];
     if (!entry) return Object.assign({}, recipe, { complete: true });
-    const [lines, steps, time, serves, author] = entry;
+    const [lines, steps, time, serves, author, licence] = entry;
     const site = recipe.sourceName;
     return Object.assign({}, recipe, {
       ingredients: lines.length
@@ -169,9 +169,11 @@
       category: duration(time) ? `Takes ${duration(time)}` : '',
       tags: serves ? [`Serves ${serves.replace(/^serves\s*/i, '')}`] : [],
       area: author || '',
-      credit: Object.assign({}, recipe.credit, {
-        text: `Recipe from ${site}${author ? `, by ${author}` : ''}, who own it; kept here for personal use.`,
-      }),
+      credit: licence
+        ? { text: `Recipe from ${site}${author ? `, by ${author}` : ''}.`, licence, licenceUrl: '' }
+        : Object.assign({}, recipe.credit, {
+          text: `Recipe from ${site}${author ? `, by ${author}` : ''}. Ingredients listed here; the method is on the site.`,
+        }),
       complete: true,
     });
   }

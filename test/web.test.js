@@ -50,7 +50,7 @@ test('website recipes: opening one adds amounts, method and credit from its deta
   let h = 5381;
   for (let i = 0; i < url.length; i++) h = ((h * 33) ^ url.charCodeAt(i)) >>> 0;
   const detail = { [h.toString(36)]: [[['Pork mince', '500 g', 0], ['Ginger, grated', '2 cm', 1], ['Rice', '1 cup', 2], ['Salt', '', -1]],
-    ['Fry the pork.', 'Add ginger and rice.'], 'PT30M', '4', 'Jo Cook'] };
+    ['Fry the pork.', 'Add ginger and rice.'], 'PT30M', '4', 'Jo Cook', 'Public domain'] };
   const fetchDetail = async (p) => {
     if (/\/d\//.test(p)) return { ok: true, json: async () => detail };
     return fetchImpl(p);
@@ -67,6 +67,7 @@ test('website recipes: opening one adds amounts, method and credit from its deta
     assert.equal(full.ingredients[0].match, 'pork mince');
     assert.equal(full.category, 'Takes 30 min');
     assert.match(full.credit.text, /example\.com\.au, by Jo Cook/);
+    assert.equal(full.credit.licence, 'Public domain');
     assert.equal(full.methodOn, '');
   } finally { delete index.detailFiles; }
 });

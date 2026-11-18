@@ -11,10 +11,20 @@
  *   s/<word>.json  for searching: each recipe's name, address, course and what its ingredients
  *                  are (matched the same way the app matches them), one file per ingredient word,
  *                  so the app downloads only the files for your ingredients;
- *   d/<n>.json     for reading: the ingredient lines with amounts, the method, time, serves and
- *                  author, fetched when a recipe is opened. Kept for personal use, with credit and
- *                  a link to the original on every recipe.
+ *   d/<n>.json     for reading, fetched when a recipe is opened: the ingredient lines with amounts
+ *                  (a list of ingredients is facts, not writing), time, serves and author, and the
+ *                  method only for sites whose recipes are free to reuse (OPEN_SITES). Every other
+ *                  recipe links to its site, and to the Internet Archive's copy, for the method.
  */
+
+// Sites whose recipes may be copied, with credit. US federal government work is public domain;
+// USDA asks for MyPlate Kitchen recipes to be credited.
+const OPEN_SITES = {
+  'www.myplate.gov': 'Public domain: MyPlate Kitchen, U.S. Department of Agriculture',
+  'myplate.gov': 'Public domain: MyPlate Kitchen, U.S. Department of Agriculture',
+  'www.nutrition.gov': 'Public domain: Nutrition.gov, U.S. Department of Agriculture',
+  'nutrition.gov': 'Public domain: Nutrition.gov, U.S. Department of Agriculture',
+};
 'use strict';
 
 const fs = require('fs');
@@ -141,6 +151,7 @@ function hash(s) {
 }
 
 function region(host) {
+  if (OPEN_SITES[host]) return -1;
   if (/\.(?:au|nz)$/.test(host)) return 0;
   if (/\.(?:uk|ie)$/.test(host)) return 1;
   return 2;
@@ -197,7 +208,9 @@ function main(argv) {
       byUrl.set(address, {
         host: url.hostname, path: url.pathname + (url.search.length < 40 ? url.search : ''), name, ingredients,
         course: COURSE_CODES[course] || '',
-        details: [lines.slice(0, 50), method, decode(r.t).slice(0, 30), decode(r.y).slice(0, 40), decode(r.a).slice(0, 80)],
+        details: OPEN_SITES[url.hostname]
+          ? [lines.slice(0, 50), method, decode(r.t).slice(0, 30), decode(r.y).slice(0, 40), decode(r.a).slice(0, 80), OPEN_SITES[url.hostname]]
+          : [lines.slice(0, 50), [], decode(r.t).slice(0, 30), decode(r.y).slice(0, 40), decode(r.a).slice(0, 80)],
       });
     }
   }
@@ -269,7 +282,7 @@ function main(argv) {
     detailBytes += text.length;
     fs.writeFileSync(path.join(OUT, 'd', n + '.json'), text);
   }
-  console.log(`details: ${detailFiles.size} files, ${(detailBytes / 1e6).toFixed(1)} MB, ${recipes.filter((r) => r.details[1].length).length} recipes with a method`);
+  console.log(`details: ${detailFiles.size} files, ${(detailBytes / 1e6).toFixed(1)} MB, ${recipes.filter((r) => r.details[1].length).length} recipes with a method (free to reuse)`);
   const built = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({ built, count: recipes.length, detailFiles: DETAIL_FILES, sites: sites.map((s, i) => (prefixes[i] ? [s, prefixes[i]] : s)), shards }));
   const big = Object.entries(shards).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([t, n]) => `${t} ${n}`).join(', ');
