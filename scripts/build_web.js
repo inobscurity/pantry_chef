@@ -46,7 +46,8 @@ const MAIN_WORDS = new Set(`
 // Courses kept: what the app shows by default (mains, soups), and sides and starters.
 const KEEP_COURSES = new Set(['main', 'soup', 'side', 'starter']);
 // Copies of other sites, and hosts that aren't recipe sites.
-const BAD_HOST = /pinterest\.|kxcdn|cloudfront|azureedge|b-cdn|akamai|xtgem|blogspot\.(?!com$)|translate\.goog|webcache|^\d+\.\d+\.\d+\.\d+$|^localhost/;
+// Sites that have closed since the crawl (tablespoon.com now redirects to General Mills' brands page).
+const BAD_HOST = /tablespoon\.com$|pinterest\.|kxcdn|cloudfront|azureedge|b-cdn|akamai|xtgem|blogspot\.(?!com$)|translate\.goog|webcache|^\d+\.\d+\.\d+\.\d+$|^localhost/;
 
 function decode(s) {
   return String(s || '')

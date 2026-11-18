@@ -617,7 +617,11 @@
           el('a', { href: recipe.source, target: '_blank', rel: 'noopener' }, `Open the recipe ↗`)),
         el('p', { class: 'hint' }, document.body.classList.contains('in-android-app')
           ? 'Tap Save to Pantry Chef on that page to keep the full recipe, with amounts and method, in My recipes.'
-          : 'Use the Save to Pantry Chef bookmark on that page to keep the full recipe, with amounts and method, in My recipes.'));
+          : 'Use the Save to Pantry Chef bookmark on that page to keep the full recipe, with amounts and method, in My recipes.'),
+        // The recipes were collected in October 2024; a site may have moved or closed since.
+        el('p', { class: 'hint' }, 'Page moved or gone? ',
+          el('a', { href: 'https://web.archive.org/web/2024/' + recipe.source, target: '_blank', rel: 'noopener' },
+            'Open the Internet Archive’s copy ↗')));
     } else {
       method = el('p', { class: 'empty' }, 'This recipe has no written method. Try the original recipe link.');
     }
@@ -668,7 +672,7 @@
           el('h3', null, 'Method'),
           steps.length && !loadError ? el('p', { class: 'steps-note' }, 'Tick each step off as you go.') : null,
           method)),
-      credit);
+      credit || '');
   }
 
   // ---- routing ----------------------------------------------------------------------
