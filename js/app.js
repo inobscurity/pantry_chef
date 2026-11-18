@@ -84,7 +84,7 @@
 
   function renderSources() {
     const on = !!state.spoonKey;
-    $('sources-summary').textContent = on ? '5 sources, including Spoonacular' : '4 free sources';
+    $('sources-summary').textContent = on ? '6 sources, including Spoonacular' : '5 free sources';
     $('spoon-key').value = '';
     $('spoon-key').placeholder = on ? 'Key saved in this browser' : 'Paste your Spoonacular API key';
     $('remove-key').hidden = !on;
@@ -266,6 +266,7 @@
       { name: 'Wikibooks Cookbook', find: (p) => window.Wikibooks.findRecipes(p) },
       { name: 'ForkRecipe', find: (p) => window.ForkRecipe.findRecipes(p) },
       { name: 'Classic cookbooks', find: (p) => window.Books.findRecipes(p, { pantry: state.pantry, basics: state.basics }) },
+      { name: 'Recipe websites', find: (p) => window.WebRecipes.findRecipes(p, { pantry: state.pantry, basics: state.basics, main: state.main }) },
     ];
     if (state.spoonKey) list.push({ name: 'Spoonacular', find: (p) => window.Spoonacular.findRecipes(p, state.spoonKey) });
     return list;
@@ -610,6 +611,13 @@
             },
           }),
           el('span', null, stepText(text))))));
+    } else if (recipe.methodOn) {
+      method = el('div', null,
+        el('p', null, `The method is on ${recipe.methodOn}. `,
+          el('a', { href: recipe.source, target: '_blank', rel: 'noopener' }, `Open the recipe ↗`)),
+        el('p', { class: 'hint' }, document.body.classList.contains('in-android-app')
+          ? 'Tap Save to Pantry Chef on that page to keep the full recipe, with amounts and method, in My recipes.'
+          : 'Use the Save to Pantry Chef bookmark on that page to keep the full recipe, with amounts and method, in My recipes.'));
     } else {
       method = el('p', { class: 'empty' }, 'This recipe has no written method. Try the original recipe link.');
     }

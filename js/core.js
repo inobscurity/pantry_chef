@@ -232,6 +232,11 @@
   // and a recipe's shallot is still a shallot.
   const YOURS_ALSO = { 'tomato sauce': ['tomato ketchup'], shallot: ['spring onion'], butternut: ['butternut pumpkin'] };
 
+  // What else a name in your list covers ("shallot" → spring onion).
+  function alsoCovers(name) {
+    return YOURS_ALSO[normalize(name)] || [];
+  }
+
   function ingredientMatches(have, needed) {
     const key = have + '\u0000' + needed;
     let v = matchCache.get(key);
@@ -567,7 +572,7 @@
   }
 
   const api = {
-    DEFAULT_BASICS, normalize, tokens, alternatives, ingredientMatches, basicMatches, coveredByBasics, isOptional, isNotARecipe, shortName, mainIngredients, nameOf,
+    DEFAULT_BASICS, normalize, tokens, alternatives, ingredientMatches, alsoCovers, basicMatches, coveredByBasics, isOptional, isNotARecipe, shortName, mainIngredients, nameOf,
     classifyIngredients, groupRecipes, splitSteps, dedupe, COURSES, DEFAULT_COURSES, courseOf, courseFromLabel,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
