@@ -419,11 +419,10 @@
     { site: 'tasteofhome.com', name: 'Taste of Home' },
     { site: 'bbcgoodfood.com', name: 'BBC Good Food' },
     { site: 'jamieoliver.com', name: 'Jamie Oliver' },
-    // The supermarkets' recipe sections, so the search skips their product pages.
-    { site: 'woolworths.com.au/shop/recipes', name: 'Woolworths' },
-    { site: 'coles.com.au/recipes-inspiration', name: 'Coles' },
-    { site: 'aldi.com.au/recipes', name: 'Aldi' },
-    { site: 'iga.com.au/recipes', name: 'IGA' },
+    { site: 'woolworths.com.au', name: 'Woolworths' },
+    { site: 'coles.com.au', name: 'Coles' },
+    { site: 'aldi.com.au', name: 'Aldi' },
+    { site: 'iga.com.au', name: 'IGA' },
   ];
 
   // The ingredients the site searches can use: the main one first, then the rest of your list.
@@ -432,9 +431,9 @@
     return state.main ? [state.main, ...listed.filter((p) => Core.normalize(p) !== Core.normalize(state.main))] : listed;
   }
 
-  // Google drops "site:" when that site has no page with every word, and shows other sites
-  // instead. So the searches use 3 words by default (the main one and the next two); tap a
-  // word to add or leave it out.
+  // The searches go through DuckDuckGo, which keeps to the one site. Google, in the Android
+  // app's browser, often ignored "site:" and showed any website. They use 3 words by default
+  // (the main one and the next two); tap a word to add or leave it out.
   let siteWords = null;   // the words picked, or null for the default
   function tasteSearchWords() {
     const choices = tasteSearchChoices();
@@ -453,7 +452,7 @@
     const choices = tasteSearchChoices();
     const words = tasteSearchWords();
     if (!words.length) return null;
-    const href = (site) => 'https://www.google.com/search?q=' + encodeURIComponent(`site:${site} ${words.join(' ')} recipe`);
+    const href = (site) => 'https://duckduckgo.com/?q=' + encodeURIComponent(`site:${site} ${words.join(' ')} recipe`);
     return el('div', { class: 'card notice taste' },
       el('div', null, 'More ideas from recipe sites, searching for:'),
       el('div', { class: 'site-words' }, choices.map((w) => el('button', {
@@ -462,7 +461,7 @@
       }, w))),
       el('ul', { class: 'site-links' }, OTHER_SITES.map((s) => el('li', null,
         el('a', { href: href(s.site), target: '_blank', rel: 'noopener', class: 'taste-link' }, `Search ${s.name} ↗`)))),
-      el('div', { class: 'meta' }, 'Tap a word to add or remove it. If a search shows other websites, that site had nothing with all these words: try fewer.'));
+      el('div', { class: 'meta' }, 'Tap a word to add or remove it. Each link searches only that site. If one finds nothing, try fewer words.'));
   }
 
   function searchedLine(groups) {
