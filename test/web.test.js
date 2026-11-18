@@ -37,3 +37,10 @@ test('website recipes: without a main ingredient, the biggest file is left out',
   assert.deepEqual(Web._internal.shardsToLoad(['pork', 'onion', 'ginger'], index.shards, '').sort(), ['ginger', 'pork']);
   assert.deepEqual(Web._internal.shardsToLoad(['shallot'], { spring: 5, onion: 9 }, ''), ['spring', 'onion']);
 });
+
+test('website recipes: a main ingredient without its own file is found through the others', () => {
+  const shards = { pork: 5, rice: 9 };
+  assert.deepEqual(Web._internal.shardsToLoad(['onion', 'pork', 'rice'], shards, 'onion').sort(), ['pork', 'rice']);
+  assert.deepEqual(Web._internal.shardsToLoad(['onion', 'pork', 'rice'], shards, '').sort(), ['pork', 'rice']);
+  assert.deepEqual(Web._internal.shardsToLoad(['pork', 'rice'], shards, ''), ['pork']);
+});

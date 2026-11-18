@@ -20,10 +20,33 @@ const Wiki = require('../js/wikibooks.js');
 
 const OUT = path.join(__dirname, '..', 'data', 'web');
 const MIN_SHARD = 15;      // ingredient words in fewer recipes than this get no file
-// Words never given a file: everyone has them, so they never pick out a recipe.
-const NO_SHARD = new Set(['salt', 'pepper', 'water', 'oil']);
+// Only these words get a file: the things people pick as a main ingredient. Seasonings and
+// everyday basics (garlic, onion, butter, flour) don't, nor describing words ("black",
+// "powder"); filing every recipe under every word made the data far too big. A search for
+// something without a file still finds recipes through your other ingredients.
+const MAIN_WORDS = new Set(`
+  chicken beef pork lamb mutton veal goat turkey duck goose venison kangaroo rabbit quail
+  bacon ham prosciutto pancetta chorizo salami sausage mince steak brisket rib chop cutlet
+  fillet thigh drumstick wing breast liver kidney oxtail meatball
+  fish salmon tuna cod barramundi snapper trout mackerel sardine anchovy haddock hake whiting
+  flathead tilapia swordfish basa bream perch kingfish prawn crab lobster scallop mussel
+  clam oyster squid calamari octopus seafood
+  egg tofu tempeh paneer feta haloumi halloumi ricotta mozzarella parmesan cheddar brie
+  camembert gruyere mascarpone bocconcini burrata gorgonzola pecorino
+  potato kumara pumpkin squash zucchini eggplant capsicum carrot broccoli broccolini
+  cauliflower cabbage spinach kale lettuce cucumber celery leek mushroom pea bean corn
+  asparagus beetroot artichoke fennel radish turnip parsnip okra chard choy sprout
+  tomato avocado rocket watercress chilli jalapeno shallot
+  rice pasta spaghetti penne fettuccine linguine macaroni lasagne gnocchi noodle couscous
+  quinoa barley polenta lentil chickpea bread tortilla wrap oat
+  apple banana pear peach plum mango pineapple strawberry blueberry raspberry cherry
+  orange apricot fig date grape rhubarb nectarine passionfruit pomegranate melon
+  watermelon almond walnut pecan cashew peanut hazelnut pistachio chocolate
+`.trim().split(/\s+/));
+// Courses kept: what the app shows by default (mains, soups), and sides and starters.
+const KEEP_COURSES = new Set(['main', 'soup', 'side', 'starter']);
 // Copies of other sites, and hosts that aren't recipe sites.
-const BAD_HOST = /kxcdn|cloudfront|azureedge|b-cdn|akamai|xtgem|blogspot\.(?!com$)|translate\.goog|webcache|^\d+\.\d+\.\d+\.\d+$|^localhost/;
+const BAD_HOST = /pinterest\.|kxcdn|cloudfront|azureedge|b-cdn|akamai|xtgem|blogspot\.(?!com$)|translate\.goog|webcache|^\d+\.\d+\.\d+\.\d+$|^localhost/;
 
 function decode(s) {
   return String(s || '')
@@ -49,6 +72,15 @@ function cleanName(raw) {
 }
 
 // What an ingredient line is, for matching: "2 garlic cloves, unpeeled" → "garlic cloves".
+// Measuring words a line's quantity can leave in front of the name: "1 medium size winter melon".
+const LEFTOVER = new Set(['size', 'sized', 'info', 'oz', 'ounce', 'lb', 'pound', 'g', 'gram', 'kg', 'ml', 'cup',
+  'tbsp', 'tsp', 'tablespoon', 'teaspoon', 'can', 'tin', 'packet', 'pkg', 'package', 'bunch', 'handful', 'inch', 'cm',
+  'x', 'small', 'medium', 'big', 'extra', 'approx', 'approximately', 'heaping', 'scant', 'generous', 'cupful']);
+
+// "Salt and pepper to season", "pinch salt pepper": only seasoning words.
+const SEASONING_WORDS = new Set(['salt', 'pepper', 'sea', 'black', 'white', 'kosher', 'season', 'seasoning', 'seasoned',
+  'each', 'pinch', 'with', 'oil', 'water', 'and', 'or', 'to', 'for', 'dash', 'freshly', 'cracked', 'ground']);
+
 function ingredientKey(line) {
   const text = decode(line).replace(/[®™©]/g, '');
   if (!text || text.length > 200 || /:$/.test(text) || /^for the\b/i.test(text)) return null;
@@ -57,8 +89,14 @@ function ingredientKey(line) {
   let key = Core.shortName(Core.nameOf(parsed)).toLowerCase()
     .replace(/^(?:of|a|an|the)\s+/, '')
     .replace(/\s+/g, ' ').trim();
+  // In the app's own simplified form: "boneless, skinless chicken thighs" → "chicken thigh".
+  // Alternatives stay alternatives: "lemon or lime juice".
+  // "Salt and pepper" stays two things, so your basics cover it.
+  const simplify = (alt) => alt.split(/\s+(?:and|&)\s+/)
+    .map((part) => Core.tokens(part).filter((w, i, all) => !(LEFTOVER.has(w) && i < all.length - 1)).slice(-4).join(' '))
+    .filter(Boolean).join(' and ');
+  key = [...new Set(Core.alternatives(key).map(simplify).filter(Boolean))].slice(0, 2).join(' or ');
   if (!/[a-z]{2}/.test(key)) return null;
-  if (key.length > 60) key = key.slice(0, 60).replace(/\s+\S*$/, '');
   return { key, optional: Core.isOptional({ name: text, measure: parsed.measure }) };
 }
 
@@ -99,11 +137,15 @@ function main(argv) {
       for (const line of r.i || []) {
         const k = ingredientKey(line);
         if (!k || seen.has(k.key)) continue;
+        // Salt, pepper, oil and water are everyone's basics: leaving them out saves a lot of room.
+        if (Core.coveredByBasics(Core.DEFAULT_BASICS, k.key) || k.key.split(/\s+/).every((w) => SEASONING_WORDS.has(w))) continue;
         seen.add(k.key);
         ingredients.push(k);
       }
-      if (ingredients.length < 3 || ingredients.length > 40) continue;
-      const course = Core.courseFromLabel((r.c || []).map(decode).join(', '));
+      if (ingredients.length < 2 || ingredients.length > 40) continue;
+      const courseHint = Core.courseFromLabel((r.c || []).map(decode).join(', '));
+      const course = Core.courseOf({ name, courseHint, ingredients: ingredients.map((i) => ({ name: i.key, optional: i.optional })) });
+      if (!KEEP_COURSES.has(course)) continue;
       byName.add(nameKey);
       byUrl.set(address, { host: url.hostname, path: url.pathname + (url.search.length < 40 ? url.search : ''), name, ingredients, course: COURSE_CODES[course] || '' });
     }
@@ -126,12 +168,23 @@ function main(argv) {
   const counts = new Map();
   for (const r of recipes) { r.tokens = tokensOf(r); for (const t of r.tokens) counts.set(t, (counts.get(t) || 0) + 1); }
   const shards = {};
-  for (const [t, n] of counts) if (n >= MIN_SHARD && !NO_SHARD.has(t) && /^[a-z]{2,30}$/.test(t)) shards[t] = n;
+  for (const [t, n] of counts) if (n >= MIN_SHARD && MAIN_WORDS.has(t)) shards[t] = n;
 
   // 4. Write.
   fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(path.join(OUT, 's'), { recursive: true });
-  const sites = [...new Set(recipes.map((r) => r.host))].sort();
+  // Each site's addresses share a beginning ("/recipes/recipe/en-AU/r"), kept once in the index.
+  const sitePaths = new Map();
+  for (const r of recipes) { if (!sitePaths.has(r.host)) sitePaths.set(r.host, []); sitePaths.get(r.host).push(r.path); }
+  const sites = [...sitePaths.keys()].sort();
+  const prefixes = sites.map((host) => {
+    const paths = sitePaths.get(host);
+    let p = paths[0];
+    for (const q of paths) { let i = 0; while (i < p.length && p[i] === q[i]) i++; p = p.slice(0, i); }
+    return paths.length > 1 ? p : '';
+  });
+  const prefixOf = new Map(sites.map((s, i) => [s, prefixes[i]]));
+  for (const r of recipes) r.path = r.path.slice(prefixOf.get(r.host).length);
   const siteIndex = new Map(sites.map((s, i) => [s, i]));
   const rowsByShard = new Map(Object.keys(shards).map((t) => [t, []]));
   for (const r of recipes) for (const t of r.tokens) if (rowsByShard.has(t)) rowsByShard.get(t).push(r);
@@ -151,9 +204,10 @@ function main(argv) {
     fs.writeFileSync(path.join(OUT, 's', t + '.json'), text);
   }
   const built = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({ built, count: recipes.length, sites, shards }));
+  fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({ built, count: recipes.length, sites: sites.map((s, i) => (prefixes[i] ? [s, prefixes[i]] : s)), shards }));
   const big = Object.entries(shards).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([t, n]) => `${t} ${n}`).join(', ');
-  console.log(`${Object.keys(shards).length} files, ${(bytes / 1e6).toFixed(1)} MB. Biggest: ${big}`);
+  const rows = Object.values(shards).reduce((a, b) => a + b, 0);
+  console.log(`${Object.keys(shards).length} files, ${(bytes / 1e6).toFixed(1)} MB, ${(rows / recipes.length).toFixed(1)} files per recipe. Biggest: ${big}`);
 }
 
 main(process.argv.slice(2));

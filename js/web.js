@@ -57,18 +57,23 @@
   /*
    * Which files to download. With a main ingredient (★), only its files: every recipe shown
    * uses it. Otherwise one set per main ingredient; since a recipe must use at least two of
-   * your listed ingredients, the biggest set can be left out without losing any.
+   * your listed ingredients, the biggest set can be left out without losing any, as long as
+   * every main ingredient has files. Some (onion, garlic) have none: recipes with them are
+   * found through your other ingredients.
    */
   function shardsToLoad(mains, shards, main) {
-    if (main) return tokensFor(main, shards);
-    const sets = mains.map((m) => tokensFor(m, shards)).filter((s) => s.length);
-    if (sets.length > 1) {
+    const own = main ? tokensFor(main, shards) : [];
+    if (own.length) return own;
+    const others = main ? mains.filter((m) => Core.normalize(m) !== Core.normalize(main)) : mains;
+    const sets = others.map((m) => tokensFor(m, shards));
+    const loadable = sets.filter((s) => s.length);
+    if (loadable.length > 1 && loadable.length === sets.length && !main) {
       const size = (s) => s.reduce((n, t) => n + shards[t], 0);
       let biggest = 0;
-      sets.forEach((s, i) => { if (size(s) > size(sets[biggest])) biggest = i; });
-      sets.splice(biggest, 1);
+      loadable.forEach((s, i) => { if (size(s) > size(loadable[biggest])) biggest = i; });
+      loadable.splice(biggest, 1);
     }
-    return [...new Set(sets.flat())];
+    return [...new Set(loadable.flat())];
   }
 
   function hash(s) {
@@ -85,9 +90,11 @@
 
   function toRecipe(index, words, row) {
     const [name, siteIndex, path, keys, course] = row;
-    const host = index.sites[siteIndex];
+    const entry = index.sites[siteIndex];          // "host", or ["host", "/the/start/of/its/addresses"]
+    const host = Array.isArray(entry) ? entry[0] : entry;
+    const prefix = Array.isArray(entry) ? entry[1] : '';
     const site = host.replace(/^www\./, '');
-    const url = 'https://' + host + path;
+    const url = 'https://' + host + prefix + path;
     return {
       id: 'web-' + hash(url),
       dedupeKey: `${site}|${Core.normalize(name)}`,
