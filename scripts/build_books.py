@@ -343,6 +343,11 @@ SEASONINGS = {'salt', 'pepper', 'black pepper', 'white pepper', 'cayenne', 'nutm
               'allspice', 'bay leaf', 'thyme', 'sweet herb'}
 
 
+FIELD_GUIDE = re.compile(r'(?i)\b(?:toadstools|fungi|mushrooms?\b.*\bdistinguish)')
+COOKING_NAME = re.compile(r'(?i)\b(?:to (?:stew|fry|bake|broil|cook|dry|pickle|preserve|serve)|stew(?:ed)?|fri(?:ed|ture)|bak(?:ed|e)|broil(?:ed)?|roast(?:ed)?|grill(?:ed)?|sauce|soup|pur[ée]e|catsup|ketchup|fricass[ée]e|escallop(?:ed)?|scallop(?:ed)?|panned|chafing|toast|pickled?|patties|pie|omelet|a la|au gratin|with (?:cheese|cream|eggs|bacon)|mock|in (?:brown|white|butter|cream)|on toast|salad|stuffed|deviled|creamed|minced|powder|essence|extract)\b')
+FIELD_GUIDE_ENTRY = re.compile(r'(?i)\b(?:spores?|habitat|pileus|gills?|stem|volva|ring|edible\.|poisonous|see\s+\w+|culture|cultivation|beds|specimens?|students|family)\b|^\W|\(gr\b')
+
+
 def finish(recipe):
     """Turns a collected heading + paragraphs into a recipe, or None."""
     if not recipe or not recipe['paras'] and not recipe['list']:
@@ -677,6 +682,9 @@ def main(argv):
                 from fix_long_s import word_counts
                 counts = word_counts(texts)
             recipes = [r for r in recipes if readable(r, counts)]
+        if FIELD_GUIDE.search(book.get('Title', '')):
+            # Mushroom field guides: keep the cooking, not the species descriptions and keys.
+            recipes = [r for r in recipes if COOKING_NAME.search(r['n']) and not FIELD_GUIDE_ENTRY.search(r['n'])]
         recipes = link_references(recipes)
         if report:
             print(f'{bid}\t{len(recipes)}\t{book["Title"][:70]!r}')

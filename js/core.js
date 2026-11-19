@@ -397,11 +397,36 @@
 
   // Old cookbooks mix advice in with their recipes: "A Hint for Pork Pie", "Suggestions for
   // Cooking Root Vegetables", "How to Buy Meat Economically". These aren't dishes.
-  const NOT_A_RECIPE = /^(?:a\s+|some\s+|general\s+|useful\s+|more\s+|further\s+|additional\s+|important\s+)?(?:hints?|tips?(?![\s-]*top)(?!\s+of\b)|notes?|remarks?|observations?|suggestions?|advice|cautions?|general directions?|directions for|rules? for (?!under|upper)|how to (?:buy|choose|select|tell|know|judge)|to (?:choose|select|tell|know|judge)\b)/i;
+  const NOT_A_RECIPE = /^(?:a\s+|some\s+|general\s+|useful\s+|more\s+|further\s+|additional\s+|important\s+)?(?:hints?|tips?\b(?![\s-]*top)(?!\s+of\b)|notes?|remarks?|observations?|suggestions?|advice|cautions?|general directions?|directions for|rules? for (?!under|upper)|how to (?:buy|choose|select|tell|know|judge)|to (?:choose|select|tell|know|judge)\b)/i;
+  // More of what old books mix in: margin notes, back matter, household management, cleaning,
+  // pests, beauty and medicine. Recipes for invalids are real recipes and stay.
+  const NOT_A_DISH = new RegExp([
+    String.raw`^\[sidenote`,
+    String.raw`^(?:advertisements?|errata|finis|glossary|index|preface|contents|introduction|appendix)(?:$|[\s.:]+(?:of|to)\b)|^recipes?$`,
+    String.raw`^(?:duties of|varieties of|kinds of|seasons? (?:for|of)\b|season\b|prices?\b|explanation|household (?:hints|stock)|a? ?bills? of fare|weights and measures|consideration of|diet lists|time-?table|housekeepers'? time|infant feeding|trees for)`,
+    String.raw`^the (?:dairy|larder|infant|kitchen|pantry|store-?room|cook|housekeeper)$`,
+    String.raw`^to (?:remove (?:freckles|tan|wrinkles|stains?|grease|ink|mildew)|take out|destroy|expel|exterminate|kill (?:the|ants|flies|rats|moths)|get rid of|cleanse vials)`,
+    String.raw`\b(?:remed(?:y|ies)|cure for|liniments?|salves?|ointments?|poultices?|plasters?|pomades?|perfumes?|cologne|tooth-?ache|tooth-?powder|cholera|dysentery|colic|chilblains|freckles|wrinkles|rheumatism|coughs?)\b`,
+    String.raw`^(?:relief for|corns|ants|flies|moths|rats|mice|bugs|bed-?bugs|cockroaches|black lace)$`,
+    String.raw`\bsmelling salts\b`,
+  ].join('|'), 'i');
+
+  // "Tea, Coffee, Etc" or "Pies, Puddings, Etc" is a chapter. "Beef Steak or Chops, Etc" and
+  // "Stuffing for Tomatoes, Green Peppers, Etc" are recipes.
+  function chapterList(name) {
+    const m = name.match(/^(.*?),?\s*etc\.?(?:,?\s*etc\.?)?$/i);
+    if (!m) return false;
+    const body = m[1];
+    if (/\b(?:for|with|from|of|in|or|and|to|au|aux|à|a la|de|du|on)\b/i.test(body)) return false;
+    return body.includes(',') || body.split(/\s+/).length <= 3;
+  }
+
   function isNotARecipe(recipe) {
     const name = String(recipe.name || '').trim();
     // "* Comati. Furnished with a ring, etc": a field guide's description, not a dish.
-    return NOT_A_RECIPE.test(name) || /^[*†‡§]/.test(name) || /\betc\.?$/i.test(name);
+    // "Tea, Coffee, Etc": a chapter, not a recipe (but "Paste for Meat Pies, Etc" is one).
+    return NOT_A_RECIPE.test(name) || NOT_A_DISH.test(name) || /^[*†‡§]/.test(name)
+      || chapterList(name);
   }
 
   function groupRecipes(recipes, pantry, basics, maxMissing, options) {

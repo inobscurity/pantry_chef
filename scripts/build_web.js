@@ -79,10 +79,18 @@ function titleCase(s) {
 }
 
 // "Veg Spring Rolls Recipe | How to Make The Best Spring Rolls" → "Veg Spring Rolls Recipe"
+// "{Best Ever!} Slow Cooker Beef Stew", "#SundaySupper Cinco de Mayo Wraps", "[VIDEO] Salmon Packets",
+// "Angel Hair Pasta Recipe - (4.3/5)", "Beetroot Halwa Recipe: How to make Beetroot Halwa at Home".
 function cleanName(raw) {
-  let n = decode(raw).split(/\s+[|•»]\s+|\s+[–—]\s+/)[0].trim();
-  n = n.replace(/^recipe:\s*/i, '').replace(/\s*\(\s*\)\s*$/, '').trim();
+  let n = decode(raw).replace(/[\u200b-\u200f\u2060\ufeff]/g, '');
+  n = n.split(/\s+[|•»]\s+|\s+[–—]\s+|\|/)[0].trim();
+  n = n.replace(/\s*-?\s*\(\s*\d(?:\.\d)?\s*\/\s*5\s*\)\s*$/, '')            // "- (4.3/5)"
+    .replace(/(\brecipe)\s*:\s*how to (?:make|cook)\b.*$/i, '$1')                // "Recipe: How to make … at Home"
+    .replace(/^(?:\{[^}]{0,40}\}|\[[^\]]{0,40}\]|#\w+|\$\d+ \w+:)\s*/g, '')       // leading tags
+    .replace(/\s*(?:\{[^}]{0,40}\}|\[[^\]]{0,40}\])$/, '')                          // trailing tags
+    .replace(/^recipe:\s*/i, '').replace(/\s*\(\s*\)\s*$/, '').trim();
   if (n.length > 6 && n === n.toUpperCase()) n = titleCase(n);
+  else if (/^[a-z]/.test(n)) n = n.charAt(0).toUpperCase() + n.slice(1);
   return n;
 }
 
@@ -178,7 +186,7 @@ function main(argv) {
       const address = url.hostname + url.pathname;
       if (byUrl.has(address)) continue;
       const name = cleanName(r.n);
-      if (name.length < 3 || name.length > 120 || /[^\u0000-\u024f\u2000-\u206f\u2100-\u214f]/.test(name)) continue;
+      if (name.length < 3 || name.length > 120 || Core.isNotARecipe({ name }) || /[^\u0000-\u024f\u2000-\u206f\u2100-\u214f]/.test(name)) continue;
       // English only: Dutch or Norwegian recipes can pass the ingredient check ("olive oil", "salt").
       const method = methodSteps(r.s);
       if (method.length && (method.join(' ').match(/\b(?:the|and|with|until|into|minutes|add|heat|stir|of)\b/gi) || []).length < 3) continue;
