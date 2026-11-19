@@ -58,6 +58,23 @@ def capital(name):
 SALT_PORK_BEFORE = re.compile(r'(?i)\b(?:salt(?:ed)?|fat|larding|pickled)\s+(?:(?:breast|belly|streaky|piece|pieces|slices?|strips?)\s+(?:of\s+)?)?$')
 
 
+# Old names, shown with today's name so the recipe makes sense: "Chinese sauce (soy sauce)".
+OLD_NAMES = {
+    'chinese sauce': 'soy sauce', 'india soy': 'soy sauce', 'soy': 'soy sauce',
+    'saleratus': 'bicarb soda', 'salaeratus': 'bicarb soda', 'pearlash': 'bicarb soda', 'pearl ash': 'bicarb soda',
+    'soda': 'bicarb soda', 'carbonate of soda': 'bicarb soda', 'bicarbonate of soda': 'bicarb soda',
+    'sack': 'dry sherry', 'sweet oil': 'olive oil', 'currans': 'currants', 'cinamon': 'cinnamon', 'yest': 'yeast',
+    'worcester sauce': 'worcestershire sauce', 'saltpeter': 'saltpetre', 'carraway seed': 'caraway seed',
+    'farina': 'semolina', 'kitchen bouquet': 'gravy browning',
+}
+
+
+def display_name(name):
+    key = re.sub(r'(?<=[^s])s$', '', name.lower())
+    modern = OLD_NAMES.get(name.lower()) or OLD_NAMES.get(key)
+    return f'{capital(name)} ({modern})' if modern else capital(name)
+
+
 def ingredients_in_prose(text):
     """Ingredient names mentioned in a paragraph, in order, without repeats."""
     text = SIZE_OF.sub(' ', text)
@@ -87,9 +104,9 @@ def ingredients_in_prose(text):
         seen.add(key)
         ref = NUM_REF.match(text[m.end():].lstrip())
         if ref:
-            out.append([capital(name), '', '#' + (ref.group(1) or ref.group(2))])
+            out.append([display_name(name), '', '#' + (ref.group(1) or ref.group(2))])
         else:
-            out.append([capital(name), ''])
+            out.append([display_name(name), ''])
     return out
 
 # ---------------------------------------------------------------- ingredient lines ----
@@ -560,6 +577,8 @@ def match_name(name, measure='', recipe_name=''):
     # Old American books mean a winter squash by plain "squash": in Australian terms, pumpkin.
     # Summer, yellow, pattypan, scallop, button, crookneck and spaghetti squash keep their names,
     # and so does a plain "squash" in a summer squash dish ("Summer Squash Bujea").
+    if n in OLD_NAMES or re.sub(r'(?<=[^s])s$', '', n) in OLD_NAMES:           # "chinese sauce" → "soy sauce"
+        return OLD_NAMES.get(n) or OLD_NAMES[re.sub(r'(?<=[^s])s$', '', n)]
     if re.fullmatch(r'(?:(?:fresh|young|ripe|winter|cooked|stewed|boiled|mashed|strained|sifted|steamed|baked|dry|nice|good|large|small)\s+)*squash(?:es)?', n):
         return 'squash' if SUMMER_SQUASH_DISH.search(recipe_name) else 'pumpkin'
     return n

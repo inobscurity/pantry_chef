@@ -700,7 +700,11 @@
           }, isFavourite(recipe.id) ? '★ Favourite' : '☆ Favourite'),
           el('div', { class: 'links' },
             recipe.source ? el('a', { href: recipe.source, target: '_blank', rel: 'noopener' }, recipe.sourceLabel || 'Original recipe ↗') : null,
-            recipe.youtube ? el('a', { href: recipe.youtube, target: '_blank', rel: 'noopener' }, 'Video ↗') : null)))),
+            recipe.youtube ? el('a', { href: recipe.youtube, target: '_blank', rel: 'noopener' }, 'Video ↗') : null,
+            // In case the original site is down or gone (Project Gutenberg has maintenance days).
+            /^https?:\/\//.test(recipe.source || '') && !/web\.archive\.org/.test(recipe.source)
+              ? el('a', { href: 'https://web.archive.org/web/2024/' + recipe.source, target: '_blank', rel: 'noopener', class: 'archive-link' }, 'Internet Archive copy ↗')
+              : null)))),
 
       el('div', { class: 'detail-grid' },
         el('section', { class: 'card panel' },

@@ -403,3 +403,83 @@ orange rind
 lemon peel
 orange peel
 lemon zest
+
+# added after checking every method for amounts the reader missed
+soda
+bicarbonate of soda
+carbonate of soda
+saleratus
+salaeratus
+pearlash
+pearl ash
+tartaric acid
+shortening
+saltpetre
+saltpeter
+syrup
+golden syrup
+claret
+sack
+champagne
+madeira
+port wine
+whiskey
+whisky
+maraschino
+ratafia
+hops
+farina
+hominy
+rye meal
+rice flour
+arrowroot
+arrow root
+bread crumb
+mixed spice
+curry
+carraway seed
+caraway seed
+mustard seed
+chervil
+morel
+tabasco
+pimento
+pimiento
+worcester sauce
+kitchen bouquet
+gum arabic
+sweet oil
+ice water
+macaroon
+gruyere
+bisquick
+chinese sauce
+india soy
+soy
+currans
+cinamon
+yest
+calves foot
+white sauce
+brown sauce
+espagnole sauce
+spanish sauce
+allemande sauce
+bechamel
+bechamel sauce
+veloute
+veloute sauce
+hollandaise
+hollandaise sauce
+consomme
+white consomme
+aspic
+aspic jelly
+custard
+demi-glace
+glaze
+catsup
+consommé
+velouté
+béchamel
+gruyère

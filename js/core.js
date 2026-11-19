@@ -54,6 +54,14 @@
     // matches plain "pepper", the spice.
     [/\b(?:(?:red|green|yellow|orange|purple)\s+)?(?:capsicums?|bell peppers?)\b/g, 'capsicum'],
     [/\b(?:aubergines?|brinjals?)\b/g, 'eggplant'],
+    // Old names in the classic cookbooks.
+    [/\b(?:chinese sauce|india soy)\b/g, 'soy sauce'],
+    [/\b(?:sal(?:a?e)?ratus|pearl[- ]?ash|(?:bi)?carbonate of soda|baking soda|bicarb(?:onate)?(?: soda)?)\b/g, 'bicarb soda'],
+    [/\bsweet[- ]oil\b/g, 'olive oil'],
+    [/\bcurrans\b/g, 'currants'],
+    [/\bcinamon\b/g, 'cinnamon'],
+    [/\byest\b/g, 'yeast'],
+    [/\bworcester sauce\b/g, 'worcestershire sauce'],
     // Salt pork and pork fat are used for their fat (larding, frying, flavouring a stew), so
     // they aren't "pork": a boiled turkey larded with salt pork isn't a pork dish.
     [/\b(?:fat[\s-]+)?salt(?:ed)?[\s-]+(?:fat[\s-]+)?(?:(?:breast|belly|streaky)[\s-]+(?:of[\s-]+)?)?pork\b|\bpickled[\s-]+pork[\s-]+fat\b/g, 'saltpork'],
