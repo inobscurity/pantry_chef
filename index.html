@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>Pantry Chef</title>
-  <link rel="stylesheet" href="styles.css?v=202611190548">
+  <link rel="stylesheet" href="styles.css?v=202611191053">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
@@ -48,6 +48,12 @@
           <button type="button" id="find" class="btn primary" disabled>Find recipes</button>
           <button type="button" id="clear" class="btn link" hidden>Clear all</button>
         </div>
+        <details class="basics myrecipes" id="favourites">
+          <summary>★ Favourites: <span id="fav-summary">none yet</span></summary>
+          <ul id="fav-list" class="my-list"></ul>
+          <p class="hint">Open any recipe and tap <strong>☆ Favourite</strong> to keep it here: ones you love, or
+            ones you want to try. They're kept on this device, even when they don't match your ingredients.</p>
+        </details>
         <details class="basics myrecipes" id="my-recipes">
           <summary>My recipes: <span id="my-summary">none saved yet</span></summary>
           <p id="save-msg" class="save-msg" role="status"></p>
@@ -116,15 +122,15 @@
     and the <a href="https://archive.org" target="_blank" rel="noopener">Internet Archive</a>.
   </footer>
 
-  <script src="js/core.js?v=202611190548"></script>
-  <script src="js/mealdb.js?v=202611190548"></script>
-  <script src="js/spoonacular.js?v=202611190548"></script>
-  <script src="js/wikibooks.js?v=202611190548"></script>
-  <script src="js/forkrecipe.js?v=202611190548"></script>
-  <script src="js/books.js?v=202611190548"></script>
-  <script src="js/gov.js?v=202611190548"></script>
-  <script src="js/web.js?v=202611190548"></script>
-  <script src="js/myrecipes.js?v=202611190548"></script>
-  <script src="js/app.js?v=202611190548"></script>
+  <script src="js/core.js?v=202611191053"></script>
+  <script src="js/mealdb.js?v=202611191053"></script>
+  <script src="js/spoonacular.js?v=202611191053"></script>
+  <script src="js/wikibooks.js?v=202611191053"></script>
+  <script src="js/forkrecipe.js?v=202611191053"></script>
+  <script src="js/books.js?v=202611191053"></script>
+  <script src="js/gov.js?v=202611191053"></script>
+  <script src="js/web.js?v=202611191053"></script>
+  <script src="js/myrecipes.js?v=202611191053"></script>
+  <script src="js/app.js?v=202611191053"></script>
 </body>
 </html>

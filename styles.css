@@ -302,6 +302,9 @@ a { color: var(--accent); }
 .my-list li { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid var(--line); }
 .my-list li a { font-weight: 600; }
 .my-list li .meta { flex: 1; }
+.fav-mark { color: var(--accent); }
+.btn.fav { margin: 10px 0 2px; }
+.btn.fav.on { color: var(--accent); border-color: var(--accent); }
 .my-list li button { border: 0; background: none; color: var(--muted); font-size: 18px; cursor: pointer; }
 .save-msg { color: var(--have); font-weight: 600; }
 .save-msg:empty { display: none; }

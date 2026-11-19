@@ -399,7 +399,9 @@
   // Cooking Root Vegetables", "How to Buy Meat Economically". These aren't dishes.
   const NOT_A_RECIPE = /^(?:a\s+|some\s+|general\s+|useful\s+|more\s+|further\s+|additional\s+|important\s+)?(?:hints?|tips?(?![\s-]*top)(?!\s+of\b)|notes?|remarks?|observations?|suggestions?|advice|cautions?|general directions?|directions for|rules? for (?!under|upper)|how to (?:buy|choose|select|tell|know|judge)|to (?:choose|select|tell|know|judge)\b)/i;
   function isNotARecipe(recipe) {
-    return NOT_A_RECIPE.test(String(recipe.name || '').trim());
+    const name = String(recipe.name || '').trim();
+    // "* Comati. Furnished with a ring, etc": a field guide's description, not a dish.
+    return NOT_A_RECIPE.test(name) || /^[*†‡§]/.test(name) || /\betc\.?$/i.test(name);
   }
 
   function groupRecipes(recipes, pantry, basics, maxMissing, options) {

@@ -144,6 +144,38 @@
     window.PantryChefAndroid.openBrowser(a.href);
   });
 
+  // ---- favourites -------------------------------------------------------------------
+  // A copy of each favourite recipe is kept (in this browser), so it opens without a search.
+
+  const favourites = () => load('favourites', []);
+  const isFavourite = (id) => favourites().some((r) => r.id === id);
+
+  function toggleFavourite(recipe) {
+    const list = favourites();
+    const at = list.findIndex((r) => r.id === recipe.id);
+    if (at >= 0) list.splice(at, 1);
+    else list.unshift(Object.assign({}, recipe, { favouritedAt: new Date().toISOString() }));
+    save('favourites', list);
+    renderFavourites();
+    return at < 0;
+  }
+
+  function renderFavourites() {
+    const list = favourites();
+    $('fav-summary').textContent = list.length ? `${list.length} saved` : 'none yet';
+    $('fav-list').replaceChildren(...list.map((r) => el('li', null,
+      el('a', { href: '#recipe/' + encodeURIComponent(r.id) }, r.name),
+      el('span', { class: 'meta' }, ' · ' + String(r.sourceName || '').replace(/^My recipes · /, '')),
+      el('button', {
+        type: 'button',
+        'aria-label': `Remove ${r.name} from favourites`,
+        onclick: () => {
+          toggleFavourite(r);
+          if (state.searched) renderResults();
+        },
+      }, '×'))));
+  }
+
   function renderMyRecipes() {
     const list = window.MyRecipes.all();
     $('my-summary').textContent = list.length ? `${list.length} saved` : 'none saved yet';
@@ -341,7 +373,7 @@
     },
     picture(recipe.thumb || recipe.image, '', 'thumb'),
     el('div', { class: 'body' },
-      el('h3', null, recipe.name),
+      el('h3', null, isFavourite(recipe.id) ? el('span', { class: 'fav-mark', 'aria-label': 'Favourite' }, '★ ') : null, recipe.name),
       el('div', { class: 'meta' }, `Uses ${usedYours} of your ${state.pantry.length} · ${plural(recipe.ingredients.length, 'ingredient')}`),
       need.length ? el('div', { class: 'buy' }, el('strong', null, 'Buy: '), listText(need)) : null,
       el('div', { class: 'source-tag' }, `${courseLabel(courseOf(recipe))} · ${recipe.sourceName}`)));
@@ -535,7 +567,8 @@
   async function openRecipe(id) {
     const token = ++openToken;
     let recipe = state.recipes.find((r) => r.id === id) || linked.get(id)
-      || (/^my-/.test(id) ? window.MyRecipes.all().find((r) => r.id === id) : null);
+      || (/^my-/.test(id) ? window.MyRecipes.all().find((r) => r.id === id) : null)
+      || favourites().find((r) => r.id === id);
     if (!recipe && /^gov-/.test(id)) {
       try { recipe = await window.GovRecipes.recipeById(id); } catch (_) { recipe = null; }
       if (token !== openToken) return;
@@ -653,6 +686,18 @@
             el('li', null, el('strong', null, need.length), 'to buy'),
             el('li', null, el('strong', null, steps.length), steps.length === 1 ? 'step' : 'steps')),
           el('div', { class: 'meta from' }, 'From ' + recipe.sourceName),
+          el('button', {
+            type: 'button',
+            class: 'btn secondary fav' + (isFavourite(recipe.id) ? ' on' : ''),
+            'aria-pressed': String(isFavourite(recipe.id)),
+            onclick: (e) => {
+              const on = toggleFavourite(recipe);
+              e.currentTarget.classList.toggle('on', on);
+              e.currentTarget.setAttribute('aria-pressed', String(on));
+              e.currentTarget.textContent = on ? '★ Favourite' : '☆ Favourite';
+              if (state.searched) renderResults();
+            },
+          }, isFavourite(recipe.id) ? '★ Favourite' : '☆ Favourite'),
           el('div', { class: 'links' },
             recipe.source ? el('a', { href: recipe.source, target: '_blank', rel: 'noopener' }, recipe.sourceLabel || 'Original recipe ↗') : null,
             recipe.youtube ? el('a', { href: recipe.youtube, target: '_blank', rel: 'noopener' }, 'Video ↗') : null)))),
@@ -684,7 +729,8 @@
 
   function route() {
     const m = location.hash.match(/^#recipe\/(.+)$/);
-    const showRecipe = !!m && (state.recipes.length > 0 || /^#recipe\/(?:book|my|gov)-/.test(location.hash));
+    const showRecipe = !!m && (state.recipes.length > 0 || /^#recipe\/(?:book|my|gov)-/.test(location.hash)
+      || isFavourite(decodeURIComponent(m[1])));
     $('search-view').hidden = showRecipe;
     $('recipe-view').hidden = !showRecipe;
     if (showRecipe) {
@@ -744,5 +790,6 @@
   renderPantry();
   receiveSavedRecipe();
   renderMyRecipes();
+  renderFavourites();
   route();
 })();
