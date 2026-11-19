@@ -71,7 +71,7 @@
   // ---- ingredient lines -------------------------------------------------------------
 
   const NUMBER = String.raw`(?:\d+(?:[.,]\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+|[¼½¾⅓⅔⅛]|a|an|one|two|three|four|five|six|seven|eight|nine|ten|twelve|half)`;
-  const UNIT = String.raw`(?:cups?|c\.|tablespoons?|tbsps?|tbs|tbsp|teaspoons?|tsps?|tsp|grams?|gms?|g|kilograms?|kilos?|kg|millilit(?:re|er)s?|ml|lit(?:re|er)s?|l|pounds?|lbs?|ounces?|oz|fl\.?\s*oz|pinch(?:es)?|dash(?:es)?|cloves?|cans?|tins?|jars?|packets?|packages?|pkgs?|sticks?|slices?|bunch(?:es)?|handfuls?|sprigs?|pieces?|heads?|stalks?|sheets?|knobs?|drops?|quarts?|pints?|gallons?)`;
+  const UNIT = String.raw`(?:cups?|c\.|c|tablespoons?|tbsps?|tbs|tbsp|teaspoons?|tsps?|tsp|grams?|gms?|g|kilograms?|kilos?|kg|millilit(?:re|er)s?|ml|lit(?:re|er)s?|l|pounds?|lbs?|ounces?|oz|fl\.?\s*oz|pinch(?:es)?|dash(?:es)?|cloves?|cans?|tins?|jars?|packets?|packages?|pkgs?|sticks?|slices?|bunch(?:es)?|handfuls?|sprigs?|pieces?|heads?|stalks?|sheets?|knobs?|drops?|quarts?|pints?|gallons?)`;
   const QUANTITY = new RegExp(
     String.raw`^(?:(?:about|approx\.?|approximately|around)\s+)?(${NUMBER}(?:\s*(?:-|–|to)\s*${NUMBER})?(?:\s*${UNIT}\b\.?)?)\s+(?:of\s+)?(.+)$`, 'i');
 

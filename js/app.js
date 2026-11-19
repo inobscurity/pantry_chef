@@ -84,7 +84,7 @@
 
   function renderSources() {
     const on = !!state.spoonKey;
-    $('sources-summary').textContent = on ? '6 sources, including Spoonacular' : '5 free sources';
+    $('sources-summary').textContent = on ? '7 sources, including Spoonacular' : '6 free sources';
     $('spoon-key').value = '';
     $('spoon-key').placeholder = on ? 'Key saved in this browser' : 'Paste your Spoonacular API key';
     $('remove-key').hidden = !on;
@@ -265,6 +265,7 @@
       { name: 'TheMealDB', find: (p) => window.MealDB.findRecipes(p, { onProgress: setStatus }) },
       { name: 'Wikibooks Cookbook', find: (p) => window.Wikibooks.findRecipes(p) },
       { name: 'ForkRecipe', find: (p) => window.ForkRecipe.findRecipes(p) },
+      { name: 'US Government recipes', find: (p) => window.GovRecipes.findRecipes(p) },
       { name: 'Classic cookbooks', find: (p) => window.Books.findRecipes(p, { pantry: state.pantry, basics: state.basics }) },
       { name: 'Recipe websites', find: (p) => window.WebRecipes.findRecipes(p, { pantry: state.pantry, basics: state.basics, main: state.main }) },
     ];
@@ -535,6 +536,10 @@
     const token = ++openToken;
     let recipe = state.recipes.find((r) => r.id === id) || linked.get(id)
       || (/^my-/.test(id) ? window.MyRecipes.all().find((r) => r.id === id) : null);
+    if (!recipe && /^gov-/.test(id)) {
+      try { recipe = await window.GovRecipes.recipeById(id); } catch (_) { recipe = null; }
+      if (token !== openToken) return;
+    }
     if (!recipe && /^book-/.test(id)) {
       $('recipe-view').replaceChildren(backButton(), el('div', { class: 'card panel loading' }, 'Loading…'));
       try { recipe = await window.Books.recipeById(id); } catch (_) { recipe = null; }
@@ -679,7 +684,7 @@
 
   function route() {
     const m = location.hash.match(/^#recipe\/(.+)$/);
-    const showRecipe = !!m && (state.recipes.length > 0 || /^#recipe\/(?:book|my)-/.test(location.hash));
+    const showRecipe = !!m && (state.recipes.length > 0 || /^#recipe\/(?:book|my|gov)-/.test(location.hash));
     $('search-view').hidden = showRecipe;
     $('recipe-view').hidden = !showRecipe;
     if (showRecipe) {
